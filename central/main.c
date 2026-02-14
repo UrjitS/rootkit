@@ -60,6 +60,13 @@ int handle_arguments(const int argc, char * argv[], struct server_options * serv
 }
 
 int main(const int argc, char * argv[]) {
+    // Check if running as root
+    if (geteuid() != 0) {
+        fprintf(stderr, "Warning: Not running as root. Some devices may not be accessible.\n");
+        fprintf(stderr, "Consider running with: sudo %s\n\n", argv[0]);
+    }
+
+
     if (signal(SIGINT, signal_handler) == SIG_ERR) {
         fprintf(stderr, "Cannot set SIGINT handler\n");
         return EXIT_FAILURE;

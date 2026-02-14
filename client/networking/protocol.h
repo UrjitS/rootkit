@@ -1,0 +1,8 @@
+#ifndef ROOTKIT_PROTOCOL_H
+#define ROOTKIT_PROTOCOL_H
+
+
+
+
+
+#endif //ROOTKIT_PROTOCOL_H
