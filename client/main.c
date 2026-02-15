@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -5,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include "networking/protocol.h"
 #include "utils/utils.h"
 #include <networking/networking.h>
 #include <sys/socket.h>
@@ -109,12 +112,16 @@ int main(const int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Buffer to store knock source IP
+    char knock_source_ip[INET_ADDRSTRLEN] = {0};
+
     struct client_options client_options;
     client_options.host = get_local_address();
     client_options.interface_name = get_local_interface_name();
     client_options.port = 30;
     client_options.max_bytes = 2048;
     client_options.poll_ms = 200;
+    client_options.knock_source_ip = knock_source_ip;
 
     int return_val = parse_arguments(argc, argv, &client_options);
     if (return_val != 0) {
@@ -137,40 +144,65 @@ int main(const int argc, char * argv[]) {
     return_val = bind_raw_socket(raw_socket, client_options.interface_name);
     if (return_val == -1) {
         fprintf(stderr, "Error binding raw socket to interface\n");
+        close(raw_socket);
         return EXIT_FAILURE;
     }
 
-    // discover_keyboards();
-
-    // Make socket non-blocking
     const int flags = fcntl(raw_socket, F_GETFL, 0);
     fcntl(raw_socket, F_SETFL, flags | O_NONBLOCK);
 
     ssize_t n = 0;
     char buffer[4096];
+    struct packet_data packets[1024];
+
     while (!exit_flag) {
         memset(buffer, 0, sizeof(buffer));
+
         fd_set rfds;
         FD_ZERO(&rfds);
         FD_SET(raw_socket, &rfds);
 
-        if ((n = recv(raw_socket, buffer, sizeof(buffer), 0)) < 0){
-            // printf("No data available!\n");
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
+
+        const int r = select(raw_socket + 1, &rfds, NULL, NULL, &tv);
+
+        if (r < 0) {
+            if (errno == EINTR)
+                continue;
+            perror("select");
+            break;
+        }
+
+        if (r == 0) {
             continue;
         }
-        buffer[n] = '\0';
 
-        //Print data frame
-        for(int i=0; i<n; i++) {
-            printf("0x%x ", buffer[i]);
+        if (FD_ISSET(raw_socket, &rfds)) {
+            n = recv(raw_socket, buffer, sizeof(buffer), 0);
+
+            if (n < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    continue;
+                }
+                perror("recv");
+                break;
+            }
+
+            if (n > 0) {
+                return_val = parse_raw_packet(buffer, n);
+                if (return_val != -1) {
+                    handle_packet_data(packets, return_val);
+                }
+                // Send reply to knock source
+                // printf("Sending reply to %s:%d\n", knock_source_ip, REPLY_DEST_PORT);
+                // create_packet(raw_socket, client_options.host, knock_source_ip, client_options.port, REPLY_DEST_PORT);
+            }
         }
-
-        printf("\n\n");
-        fflush(stdout);
-        usleep(10000);
     }
 
-    // capture_keys("/dev/input/event8");
+    close(raw_socket);
 
     return EXIT_SUCCESS;
 }

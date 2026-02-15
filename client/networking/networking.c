@@ -1,6 +1,4 @@
 #include "networking.h"
-
-
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -105,6 +103,11 @@ int listen_port_knock(const struct client_options * client_options) {
                    src_ip,
                    (unsigned)ntohs(src.sin_port),
                    n);
+
+            if (client_options->knock_source_ip) {
+                strncpy(client_options->knock_source_ip, src_ip, INET_ADDRSTRLEN);
+            }
+
             received_knock = true;
             fflush(stdout);
         }
@@ -114,7 +117,7 @@ int listen_port_knock(const struct client_options * client_options) {
     free(buf);
     close(fd);
 
-    return 0;
+    return received_knock ? 0 : -1;
 }
 
 int create_udp_socket() {
@@ -148,6 +151,7 @@ int create_raw_udp_socket() {
     if (setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &yes, sizeof(yes)) < 0)
     {
         perror("setsockopt");
+        close(fd);
         return -1;
     }
 
@@ -306,5 +310,46 @@ void create_packet(const int socket_fd, const char * source_ip, const char * des
     dest.sin_port = udp->dest;
     dest.sin_addr.s_addr = ip->daddr;
 
-    sendto(socket_fd, packet, sizeof(struct iphdr) + sizeof(struct udphdr) +  payload_len,0, (struct sockaddr *)&dest, sizeof(dest));
+    const ssize_t sent = sendto(socket_fd, packet, sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len, 0, (struct sockaddr *)&dest, sizeof(dest));
+    if (sent < 0) {
+        perror("sendto");
+    } else {
+        printf("Sent raw UDP packet: %s:%d -> %s:%d (%zd bytes)\n", source_ip, source_port, dest_ip, dest_port, sent);
+    }
 }
+
+int parse_raw_packet(const char * buffer, const ssize_t n) {
+    if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct udphdr))) {
+        return -1;
+    }
+
+    const struct iphdr * ip = (struct iphdr *)buffer;
+
+    if (ip->protocol != IPPROTO_UDP) {
+        return -1;
+    }
+
+    const struct udphdr * udp = (struct udphdr *)(buffer + (ip->ihl * 4));
+
+    if (ntohs(udp->dest) != 8080) {
+        return -1;
+    }
+
+    const unsigned long payload_len = n - (ip->ihl * 4) - sizeof(struct udphdr);
+
+    char src_ip[INET_ADDRSTRLEN];
+    char dst_ip[INET_ADDRSTRLEN];
+
+    inet_ntop(AF_INET, &(ip->saddr), src_ip, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &(ip->daddr), dst_ip, INET_ADDRSTRLEN);
+
+    printf("IP: %s:%d -> %s:%d\n", src_ip, ntohs(udp->source), dst_ip, ntohs(udp->dest));
+    printf("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
+    printf("UDP Length %d\n", ntohs(udp->len) - 8);
+
+    fflush(stdout);
+
+    return ntohs(udp->len) - 8;
+}
+
+

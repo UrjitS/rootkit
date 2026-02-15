@@ -11,7 +11,9 @@ struct client_options {
     int port;
     int max_bytes;
     int poll_ms;
+    char * knock_source_ip;  // IP that sent the knock
 };
+
 
 bool parse_int(const char *s, int *out);
 unsigned short checksum(void *b, int len);
