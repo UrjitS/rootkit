@@ -59,6 +59,12 @@ int handle_arguments(const int argc, char * argv[], struct server_options * serv
         return EXIT_FAILURE;
     }
 
+    if (server_options->client_ip_address == NULL) {
+        fprintf(stderr, "Client IP not provided\n");
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }
 
@@ -79,6 +85,7 @@ int main(const int argc, char * argv[]) {
     }
 
     struct server_options server_options;
+    server_options.client_ip_address = NULL;
     server_options.host = get_local_address();
     server_options.interface_name = get_local_interface_name();
     server_options.port = RECEIVING_PORT;
