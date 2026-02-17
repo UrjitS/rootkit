@@ -7,8 +7,8 @@
 #include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include "networking/protocol.h"
 #include "utils/utils.h"
+#include "networking/protocol.h"
 #include <networking/networking.h>
 #include <sys/socket.h>
 
@@ -26,7 +26,7 @@ void usage(const char *program_name) {
 
 static void signal_handler(const int sig_no) {
     if (sig_no == SIGINT || sig_no == SIGTERM) {
-        fprintf(stderr, "Received signal %d, shutting down", sig_no);
+        fprintf(stderr, "Received signal %d, shutting down\n", sig_no);
         exit_flag = true;
     }
 }
@@ -153,7 +153,16 @@ int main(const int argc, char * argv[]) {
 
     ssize_t n = 0;
     char buffer[4096];
-    struct packet_data packets[1024];
+
+    struct packet_data * head = malloc(sizeof(struct packet_data));
+    head->data = 0;
+    head->next = NULL;
+
+    struct session_info session_info;
+    session_info.head = head;
+    session_info.command_counter = 0;
+    session_info.packet_index = 0;
+    session_info.last_command_code = UNKNOWN;
 
     while (!exit_flag) {
         memset(buffer, 0, sizeof(buffer));
@@ -191,9 +200,9 @@ int main(const int argc, char * argv[]) {
             }
 
             if (n > 0) {
-                return_val = parse_raw_packet(buffer, n);
-                if (return_val != -1) {
-                    handle_packet_data(packets, return_val);
+                const uint16_t data = parse_raw_packet(buffer, n);
+                if (data != 0) {
+                    handle_packet_data(&session_info, data);
                 }
                 // Send reply to knock source
                 // printf("Sending reply to %s:%d\n", knock_source_ip, REPLY_DEST_PORT);
@@ -202,7 +211,10 @@ int main(const int argc, char * argv[]) {
         }
     }
 
+    print_linked_list(head);
+
     close(raw_socket);
+    free_linked_list(head);
 
     return EXIT_SUCCESS;
 }

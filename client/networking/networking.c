@@ -318,21 +318,21 @@ void create_packet(const int socket_fd, const char * source_ip, const char * des
     }
 }
 
-int parse_raw_packet(const char * buffer, const ssize_t n) {
+uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
     if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct udphdr))) {
-        return -1;
+        return 0;
     }
 
     const struct iphdr * ip = (struct iphdr *)buffer;
 
     if (ip->protocol != IPPROTO_UDP) {
-        return -1;
+        return 0;
     }
 
     const struct udphdr * udp = (struct udphdr *)(buffer + (ip->ihl * 4));
 
     if (ntohs(udp->dest) != 8080) {
-        return -1;
+        return 0;
     }
 
     const unsigned long payload_len = n - (ip->ihl * 4) - sizeof(struct udphdr);

@@ -1,6 +1,7 @@
 #ifndef ROOTKIT_NETWORKING_H
 #define ROOTKIT_NETWORKING_H
 
+#include <stdint.h>
 #include <utils/utils.h>
 #include <sys/types.h>
 
@@ -24,7 +25,7 @@ int listen_port_knock(const struct client_options * client_options);
 
 // Raw packet functions
 void create_packet(int socket_fd, const char * source_ip, const char * dest_ip, int source_port, int dest_port);
-int parse_raw_packet(const char *buffer, ssize_t n);
+uint16_t parse_raw_packet(const char *buffer, ssize_t n);
 
 
 #endif //ROOTKIT_NETWORKING_H
