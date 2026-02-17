@@ -161,7 +161,8 @@ int main(const int argc, char * argv[]) {
     struct session_info session_info;
     session_info.head = head;
     session_info.command_counter = 0;
-    session_info.packet_index = 0;
+    session_info.packet_counter = 0;
+    session_info.data_counter = 0;
     session_info.last_command_code = UNKNOWN;
 
     while (!exit_flag) {

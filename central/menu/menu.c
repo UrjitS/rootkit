@@ -1,11 +1,10 @@
 #include "menu.h"
+#include "protocol.h"
 #include "utils.h"
-
 #include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
-#include "protocol.h"
 
 //NOLINTNEXTLINE
 void cmd_disconnect(struct server_options * server_options) {

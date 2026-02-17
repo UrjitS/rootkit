@@ -161,7 +161,7 @@ int create_raw_udp_socket() {
 int bind_raw_socket(const int socket_fd, char * ip_address) {
     //Bind to interface
     if ((setsockopt(socket_fd, SOL_SOCKET, SO_BINDTODEVICE, ip_address, strlen(ip_address)+1)) < 0) {
-        printf ("Failed to bind socket to interface device %s!\n", ip_address);
+        printf("Failed to bind socket to interface device %s!\n", ip_address);
         return -1;
     }
 
@@ -343,9 +343,9 @@ uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
     inet_ntop(AF_INET, &(ip->saddr), src_ip, INET_ADDRSTRLEN);
     inet_ntop(AF_INET, &(ip->daddr), dst_ip, INET_ADDRSTRLEN);
 
-    printf("IP: %s:%d -> %s:%d\n", src_ip, ntohs(udp->source), dst_ip, ntohs(udp->dest));
-    printf("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
-    printf("UDP Length %d\n", ntohs(udp->len) - 8);
+    // printf("IP: %s:%d -> %s:%d\n", src_ip, ntohs(udp->source), dst_ip, ntohs(udp->dest));
+    // printf("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
+    // printf("UDP Length %d\n", ntohs(udp->len) - 8);
 
     fflush(stdout);
 
