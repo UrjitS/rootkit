@@ -8,9 +8,9 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/socket.h>
-
 #include "menu.h"
 #include "networking.h"
+#include "protocol.h"
 #include "utils.h"
 
 void usage(const char *program_name) {
@@ -79,7 +79,9 @@ int main(const int argc, char * argv[]) {
     }
 
     struct server_options server_options;
+    server_options.host = get_local_address();
     server_options.interface_name = get_local_interface_name();
+    server_options.port = RECEIVING_PORT;
 
     const int return_value = handle_arguments(argc, argv, &server_options);
     if (return_value == EXIT_FAILURE) {
@@ -104,7 +106,7 @@ int main(const int argc, char * argv[]) {
     }
 
     // Initiate Port Knock
-
+    initiate_port_knocking(&server_options);
 
     // Set stdin to non-blocking mode
     int flags = fcntl(STDIN_FILENO, F_GETFL, 0);

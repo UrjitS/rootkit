@@ -79,6 +79,59 @@ int bind_raw_socket(const int socket_fd, char * ip_address) {
     return 0;
 }
 
+char * get_local_address() {
+    struct sockaddr_in address;
+    address.sin_family = AF_INET;
+
+    // Get list of network interfaces
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) == -1) {
+        fprintf(stderr, "Error getting network interfaces\n");
+        return NULL;
+    }
+
+    bool found = false;
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET) {
+            continue;
+        }
+
+        if (strncmp(ifa->ifa_name, "wlo", 3) == 0) {
+            const struct sockaddr_in * addr_in = (struct sockaddr_in*) ifa->ifa_addr;
+            address.sin_addr = addr_in->sin_addr;
+            printf("Binding to %s: %s\n",  ifa->ifa_name, inet_ntoa(addr_in->sin_addr));
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+            if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET) {
+                continue;
+            }
+
+            if (strcmp(ifa->ifa_name, "lo") != 0) {
+                const struct sockaddr_in * addr_in = (struct sockaddr_in*) ifa->ifa_addr;
+                address.sin_addr = addr_in->sin_addr;
+                printf("Binding to %s: %s\n",  ifa->ifa_name, inet_ntoa(addr_in->sin_addr));
+                found = true;
+                break;
+            }
+        }
+    }
+
+    freeifaddrs(ifaddr);
+
+    if (!found) {
+        printf("No suitable network interface found");
+        return NULL;
+    }
+    const struct sockaddr_in * addr_in = (struct sockaddr_in*) ifa->ifa_addr;
+    address.sin_addr = addr_in->sin_addr;
+    return inet_ntoa(addr_in->sin_addr);
+}
+
 void create_packet(const int socket_fd, const char * source_ip, const char * dest_ip, const int source_port, const int dest_port) {
     char packet[4096] = {0};
 
@@ -153,6 +206,3 @@ uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
     return ntohs(udp->len) - 8;
 }
 
-void initiate_port_knock() {
-
-}

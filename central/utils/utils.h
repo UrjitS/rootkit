@@ -5,8 +5,10 @@
 #include "protocol.h"
 
 struct server_options {
-    char * client_ip_address;
+    char * host;
     char * interface_name;
+    char * client_ip_address;
+    int port;
     int client_fd;
 };
 

