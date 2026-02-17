@@ -8,7 +8,7 @@
 
 int create_raw_udp_socket();
 int bind_raw_socket(int socket_fd, char * ip_address);
-void create_packet(int socket_fd, const char * source_ip, const char * dest_ip, int source_port, int dest_port);
+void send_message(int socket_fd, const char * source_ip, const char * dest_ip, int port, char * message);
 uint16_t parse_raw_packet(const char * buffer, ssize_t n);
 char * get_local_interface_name();
 char * get_local_address();

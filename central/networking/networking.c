@@ -132,16 +132,20 @@ char * get_local_address() {
     return inet_ntoa(addr_in->sin_addr);
 }
 
-void create_packet(const int socket_fd, const char * source_ip, const char * dest_ip, const int source_port, const int dest_port) {
-    char packet[4096] = {0};
+void generate_random_string(char * dest, size_t length) {
+    const char charset[] = "0123456789"
+                         "abcdefghijklmnopqrstuvwxyz"
+                         "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    struct iphdr * ip = (struct iphdr *)packet;
-    struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
-    char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
+    while (length-- > 0) {
+        const size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
+        *dest++ = charset[index];
+    }
 
-    const int payload_len = 2;
-    strcpy(payload, "hi");
+    *dest = '\0';
+}
 
+void create_ip_header(struct iphdr * ip, const char * source_ip, const char * dest_ip) {
     ip->ihl = 5;
     ip->version = 4;
     ip->tos = 0;
@@ -153,9 +157,22 @@ void create_packet(const int socket_fd, const char * source_ip, const char * des
     ip->saddr = inet_addr(source_ip);
     ip->daddr = inet_addr(dest_ip);
     ip->check = checksum(ip, sizeof(struct iphdr));
+}
 
-    udp->source = htons(source_port);
-    udp->dest   = htons(dest_port);
+void send_message(const int socket_fd, const char * source_ip, const char * dest_ip, const int port, char * message) {
+    char packet[4096] = {0};
+
+    struct iphdr * ip = (struct iphdr *)packet;
+    struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
+    char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
+
+    const int payload_len = 2;
+    strcpy(payload, "hi");
+
+
+
+    udp->source = htons(port);
+    udp->dest   = htons(port);
     udp->len    = htons(sizeof(struct udphdr) + payload_len);
     udp->check  = 0;
 
@@ -168,7 +185,7 @@ void create_packet(const int socket_fd, const char * source_ip, const char * des
     if (sent < 0) {
         perror("sendto");
     } else {
-        printf("Sent raw UDP packet: %s:%d -> %s:%d (%zd bytes)\n", source_ip, source_port, dest_ip, dest_port, sent);
+        printf("Sent raw UDP packet: %s:%d -> %s:%d (%zd bytes)\n", source_ip, port, dest_ip, port, sent);
     }
 }
 

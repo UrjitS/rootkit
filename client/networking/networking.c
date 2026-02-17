@@ -278,7 +278,7 @@ int bind_socket(const int socket_fd, const struct client_options * client_option
     return ret;
 }
 
-void create_packet(const int socket_fd, const char * source_ip, const char * dest_ip, const int source_port, const int dest_port) {
+void send_message(const int socket_fd, const char * source_ip, const char * dest_ip, const int source_port, const int dest_port) {
     char packet[4096] = {0};
 
     struct iphdr * ip = (struct iphdr *)packet;

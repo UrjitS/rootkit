@@ -76,7 +76,7 @@ enum FILE_TYPE {
 };
 
 void send_file(struct server_options * server_options);
-void receive_file(int fd);
+void receive_file(struct server_options * server_options);
 void send_watch(int fd, enum FILE_TYPE file_type, char * path);
 
 

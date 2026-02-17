@@ -24,7 +24,7 @@ char * get_local_interface_name(void);
 int listen_port_knock(const struct client_options * client_options);
 
 // Raw packet functions
-void create_packet(int socket_fd, const char * source_ip, const char * dest_ip, int source_port, int dest_port);
+void send_message(int socket_fd, const char * source_ip, const char * dest_ip, int source_port, int dest_port);
 uint16_t parse_raw_packet(const char *buffer, ssize_t n);
 
 

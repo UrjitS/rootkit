@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 void initiate_port_knocking(struct server_options * server_options) {
-    create_packet(server_options->client_fd, server_options->host, server_options->client_ip_address, PORT_KNOCKING_PORT, PORT_KNOCKING_PORT);
+    send_message(server_options->client_fd, server_options->host, server_options->client_ip_address, PORT_KNOCKING_PORT, NULL);
 }
 
 // void handle_packet_data(struct session_info * session_info, const uint16_t data) {
@@ -67,7 +67,9 @@ void send_file(struct server_options * server_options) {
 }
 
 
-void receive_file(int fd) {
+void receive_file(struct server_options * server_options) {
+    char message[] = "hello";
+    send_message(server_options->client_fd, server_options->host, server_options->client_ip_address, RECEIVING_PORT, message);
 
 }
 
