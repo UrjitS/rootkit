@@ -342,14 +342,22 @@ uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
 
     inet_ntop(AF_INET, &(ip->saddr), src_ip, INET_ADDRSTRLEN);
     inet_ntop(AF_INET, &(ip->daddr), dst_ip, INET_ADDRSTRLEN);
+    const uint32_t host_src = ntohl(ip->saddr);
+    const uint8_t byte1 = (host_src >> 8) & 0xFF;
+    const uint8_t byte2 = host_src & 0xFF;
 
-    // printf("IP: %s:%d -> %s:%d\n", src_ip, ntohs(udp->source), dst_ip, ntohs(udp->dest));
-    // printf("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
-    // printf("UDP Length %d\n", ntohs(udp->len) - 8);
+    printf("Byte 1: %u\n", byte1);
+    printf("Byte 1 c: %c\n", byte1);
+    printf("Byte 2: %u\n", byte2);
+    printf("Byte 2 c: %c\n", byte2);
+
+    printf("IP: %u:%d -> %s:%d\n", ntohl(ip->saddr), ntohs(udp->source), dst_ip, ntohs(udp->dest));
+    printf("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
+    printf("UDP Length %d\n", ntohs(udp->len) - 8);
 
     fflush(stdout);
 
-    return ntohs(udp->len) - 8;
+    return (uint16_t) host_src;
 }
 
 

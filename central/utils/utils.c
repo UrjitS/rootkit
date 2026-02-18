@@ -82,3 +82,27 @@ void free_linked_list(struct packet_data * head) {
 
     free(packet_data);
 }
+
+int generate_random_packet_length() {
+    return rand() % (PACKET_LENGTH_MAX + 1);
+}
+
+char random_char(const int index) {
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return charset[index];
+}
+
+char * generate_random_string(const size_t length) {
+    srand(time(NULL));
+    char * dest = malloc(length);
+    int i;
+
+    for (i = 0; i < length - 1; i++) {
+        const int index = rand() % 62;
+        dest[i] = random_char(index);
+    }
+
+    dest[i] = '\0';
+
+    return dest;
+}

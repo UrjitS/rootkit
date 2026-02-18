@@ -132,20 +132,8 @@ char * get_local_address() {
     return inet_ntoa(addr_in->sin_addr);
 }
 
-void generate_random_string(char * dest, size_t length) {
-    const char charset[] = "0123456789"
-                         "abcdefghijklmnopqrstuvwxyz"
-                         "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    while (length-- > 0) {
-        const size_t index = (double) rand() / RAND_MAX * (sizeof charset - 1);
-        *dest++ = charset[index];
-    }
-
-    *dest = '\0';
-}
-
-void create_ip_header(struct iphdr * ip, const char * source_ip, const char * dest_ip) {
+void create_ip_header(struct iphdr * ip, const uint32_t source_ip, const char * dest_ip, const uint16_t payload_len) {
     ip->ihl = 5;
     ip->version = 4;
     ip->tos = 0;
@@ -154,28 +142,19 @@ void create_ip_header(struct iphdr * ip, const char * source_ip, const char * de
     ip->frag_off = 0;
     ip->ttl = 64;
     ip->protocol = IPPROTO_UDP;
-    ip->saddr = inet_addr(source_ip);
+    ip->saddr = htonl(source_ip);
     ip->daddr = inet_addr(dest_ip);
     ip->check = checksum(ip, sizeof(struct iphdr));
 }
 
-void send_message(const int socket_fd, const char * source_ip, const char * dest_ip, const int port, char * message) {
-    char packet[4096] = {0};
-
-    struct iphdr * ip = (struct iphdr *)packet;
-    struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
-    char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
-
-    const int payload_len = 2;
-    strcpy(payload, "hi");
-
-
-
+void create_udp_header(struct udphdr * udp, const int port, const uint16_t payload_len) {
     udp->source = htons(port);
     udp->dest   = htons(port);
     udp->len    = htons(sizeof(struct udphdr) + payload_len);
     udp->check  = 0;
+}
 
+void send_packet(const int socket_fd, const char * packet, const struct iphdr * ip, const struct udphdr * udp, const int payload_len) {
     struct sockaddr_in dest;
     dest.sin_family = AF_INET;
     dest.sin_port = udp->dest;
@@ -184,8 +163,85 @@ void send_message(const int socket_fd, const char * source_ip, const char * dest
     const ssize_t sent = sendto(socket_fd, packet, sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len, 0, (struct sockaddr *)&dest, sizeof(dest));
     if (sent < 0) {
         perror("sendto");
-    } else {
-        printf("Sent raw UDP packet: %s:%d -> %s:%d (%zd bytes)\n", source_ip, port, dest_ip, port, sent);
+    }
+    else {
+        printf("Sent raw UDP packet\n");
+    }
+}
+
+void send_command(const int socket_fd, const char * dest_ip, const int port, const enum command_codes command) {
+    // TODO Add in random data into the packet as well as two beginning ip numbers i.e. 10.102.DD.DD
+    char packet[4096] = {0};
+    const uint16_t payload_len = generate_random_packet_length();
+    char * random_string = generate_random_string(payload_len);
+
+    struct iphdr * ip = (struct iphdr *)packet;
+    struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
+    char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
+
+    const uint8_t command_byte = command;
+    const uint32_t src = (command_byte << 8) | command_byte;
+
+    create_ip_header(ip, src, dest_ip, payload_len);
+    create_udp_header(udp, port, payload_len);
+    strcpy(payload, random_string);
+
+    send_packet(socket_fd, packet, ip, udp, payload_len);
+    send_packet(socket_fd, packet, ip, udp, payload_len);
+
+    free(random_string);
+}
+
+void send_message(const int socket_fd, const char * source_ip, const char * dest_ip, const int port, const char * message) {
+    // TODO Add in random data into the packet as well as two beginning ip numbers i.e. 10.102.DD.DD
+    char packet[4096] = {0};
+    uint16_t payload_len = generate_random_packet_length();
+
+    struct iphdr * ip = (struct iphdr *)packet;
+    struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
+    char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
+
+
+    if (message == NULL) {
+        char * random_string = generate_random_string(payload_len);
+        create_ip_header(ip, 0, dest_ip, payload_len);
+        create_udp_header(udp, port, payload_len);
+        strcpy(payload, random_string);
+        send_packet(socket_fd, packet, ip, udp, payload_len);
+
+        free(random_string);
+        return;
+    }
+
+    const size_t length = strlen(message);
+    for (int index = 0; index < length; index += 2) {
+        // Only 1 byte remaining
+        if (index + 2 > length) {
+            const uint32_t src = (unsigned char) message[index];
+            char * random_string = generate_random_string(payload_len);
+
+            create_ip_header(ip, src, dest_ip, payload_len);
+            create_udp_header(udp, port, payload_len);
+            strcpy(payload, random_string);
+            send_packet(socket_fd, packet, ip, udp, payload_len);
+
+            free(random_string);
+            return;
+        }
+
+        // Two bytes operation
+        const uint8_t first_byte = message[index];
+        const uint8_t second_byte = message[index + 1];
+        const uint32_t src = (first_byte << 8) | second_byte;
+        char * random_string = generate_random_string(payload_len);
+
+        create_ip_header(ip, src, dest_ip, payload_len);
+        create_udp_header(udp, port, payload_len);
+        strcpy(payload, random_string);
+        send_packet(socket_fd, packet, ip, udp, payload_len);
+
+        free(random_string);
+        payload_len = generate_random_packet_length(); // rand length per packet
     }
 }
 
