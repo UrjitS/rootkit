@@ -18,7 +18,7 @@
 #include "../../client/networking/networking.h"
 
 void initiate_port_knocking(struct server_options * server_options) {
-    send_message(server_options->client_fd, server_options->host, server_options->client_ip_address, PORT_KNOCKING_PORT, NULL);
+    send_message(server_options->client_fd, server_options->client_ip_address, PORT_KNOCKING_PORT, NULL);
 }
 
 // void handle_packet_data(struct session_info * session_info, const uint16_t data) {
@@ -124,7 +124,7 @@ void receive_file(const struct server_options * server_options) {
         size_t chunk_bytes;
         while ((chunk_bytes = fread(file_buffer, 1, message_length - 1, file)) > 0) {
             file_buffer[chunk_bytes] = '\0';
-            send_message(server_options->client_fd, server_options->host, server_options->client_ip_address, RECEIVING_PORT, file_buffer);
+            send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, file_buffer);
             chunk_count++;
             printf("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
             fflush(stdout);

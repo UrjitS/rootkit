@@ -1,6 +1,5 @@
 #include "utils.h"
 #include <stdbool.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -83,8 +82,8 @@ void free_linked_list(struct packet_data * head) {
     free(packet_data);
 }
 
-int generate_random_packet_length() {
-    return rand() % (PACKET_LENGTH_MAX + 1);
+int generate_random_length(const int max_length) {
+    return rand() % (max_length + 1);
 }
 
 char random_char(const int index) {
