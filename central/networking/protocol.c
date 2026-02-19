@@ -120,6 +120,10 @@ void receive_file(const struct server_options * server_options) {
             return;
         }
 
+        // Send over the filename and the FILENAME command
+        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
+        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
+
         size_t chunk_count = 0;
         size_t chunk_bytes;
         while ((chunk_bytes = fread(file_buffer, 1, message_length - 1, file)) > 0) {

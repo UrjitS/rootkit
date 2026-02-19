@@ -67,31 +67,41 @@ void log_message(const char *format, ...) {
 
 void print_linked_list(const struct packet_data * head) {
     const struct packet_data * packet_data = head;
-    if (packet_data->next == NULL) {
-        log_message("Node data: %d", packet_data->data);
-        return;
-    }
-
-    while (packet_data->next != NULL) {
+    while (packet_data != NULL) {
         log_message("Node data: %d", packet_data->data);
         packet_data = packet_data->next;
     }
-
-    log_message("Node data: %d", packet_data->data);
 }
 
 void free_linked_list(struct packet_data * head) {
     struct packet_data * packet_data = head;
-    if (packet_data->next == NULL) {
+    while (packet_data != NULL) {
+        struct packet_data * next = packet_data->next;
         free(packet_data);
-        return;
+        packet_data = next;
+    }
+}
+
+int generate_random_length(const int max_length) {
+    return rand() % (max_length + 1);
+}
+
+char random_char(const int index) {
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return charset[index];
+}
+
+char * generate_random_string(const size_t length) {
+    srand(time(NULL));
+    char * dest = malloc(length);
+    int i;
+
+    for (i = 0; i < length - 1; i++) {
+        const int index = rand() % 62;
+        dest[i] = random_char(index);
     }
 
-    while (packet_data->next != NULL) {
-        struct packet_data *previous_node = packet_data;
-        packet_data = packet_data->next;
-        free(previous_node);
-    }
+    dest[i] = '\0';
 
-    free(packet_data);
+    return dest;
 }

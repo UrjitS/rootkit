@@ -102,6 +102,8 @@ int main(const int argc, char * argv[]) {
         fprintf(stderr, "Warning: Not running as root. Some devices may not be accessible.\n");
         fprintf(stderr, "Consider running with: sudo %s\n\n", argv[0]);
     }
+    const int pid = getpid();
+    log_message("PID: %d", pid);
 
     if (signal(SIGINT, signal_handler) == SIG_ERR) {
         fprintf(stderr, "Cannot set SIGINT handler\n");
@@ -212,10 +214,10 @@ int main(const int argc, char * argv[]) {
         }
     }
 
-    print_linked_list(head);
+    print_linked_list(session_info.head);
 
     close(raw_socket);
-    free_linked_list(head);
+    free_linked_list(session_info.head);
 
     return EXIT_SUCCESS;
 }

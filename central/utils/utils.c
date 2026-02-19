@@ -83,7 +83,11 @@ void free_linked_list(struct packet_data * head) {
 }
 
 int generate_random_length(const int max_length) {
-    return rand() % (max_length + 1);
+    const int random_number = rand() % (max_length + 1);
+    if (random_number == 0) {
+        return random_number + 1;
+    }
+    return random_number;
 }
 
 char random_char(const int index) {
@@ -92,6 +96,8 @@ char random_char(const int index) {
 }
 
 char * generate_random_string(const size_t length) {
+    if (length == 0) return NULL;
+
     srand(time(NULL));
     char * dest = malloc(length);
     int i;

@@ -11,6 +11,7 @@ enum command_codes {
     STOP_KEYLOGGER,
     KEY_LOG_TRANSFER,
     SEND_FILE,
+    FILENAME,
     RECEIVE_FILE,
     SEND_WATCH,
     WATCH_CHANGED,
@@ -19,7 +20,6 @@ enum command_codes {
     DISCONNECT,
     UNKNOWN
 };
-
 struct packet_data {
     uint16_t data;
     struct packet_data * next;

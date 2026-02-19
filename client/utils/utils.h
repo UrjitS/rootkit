@@ -6,6 +6,9 @@
 
 extern _Atomic int exit_flag;
 
+#define PACKET_LENGTH_MAX 50
+#define IP_MAX 10
+
 struct client_options {
     char * host;
     char * interface_name;
@@ -21,5 +24,7 @@ unsigned short checksum(void *b, int len);
 void log_message(const char *format, ...);
 void free_linked_list(struct packet_data * head);
 void print_linked_list(const struct packet_data * head);
+int generate_random_length(int max_length);
+char * generate_random_string(size_t length);
 
 #endif //ROOTKIT_UTILS_H

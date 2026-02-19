@@ -1,7 +1,6 @@
 #include "networking.h"
 #include "utils.h"
 #include <arpa/inet.h>
-#include <errno.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -191,7 +190,7 @@ void send_command(const int socket_fd, const char * dest_ip, const int port, con
     free(random_string);
 }
 
-void send_message(const int socket_fd, const char *dest_ip, const int port, const char *message) {
+void send_message(const int socket_fd, const char * dest_ip, const int port, const char * message) {
     char packet[4096] = {0};
     uint16_t payload_len = generate_random_length(PACKET_LENGTH_MAX);
     uint32_t src = generate_random_length(IP_MAX) << 24 | generate_random_length(IP_MAX) << 16 | generate_random_length(IP_MAX) << 8 | generate_random_length(IP_MAX);
@@ -211,12 +210,11 @@ void send_message(const int socket_fd, const char *dest_ip, const int port, cons
         free(random_string);
         return;
     }
-
     const size_t length = strlen(message);
     for (int index = 0; index < length; index += 2) {
         // Only 1 byte remaining
         if (index + 2 > length) {
-            src = (src & 0xFFFFFF00) | (unsigned char) message[index];
+            src = (src & 0xFFFF0000) | (unsigned char) message[index];
             char * random_string = generate_random_string(payload_len);
 
             create_ip_header(ip, src, dest_ip, payload_len);

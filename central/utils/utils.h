@@ -6,6 +6,7 @@
 
 #define PACKET_LENGTH_MAX 50
 #define IP_MAX 10
+
 struct server_options {
     char * host;
     char * interface_name;

