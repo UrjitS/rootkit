@@ -41,7 +41,7 @@ void cmd_transfer_file(struct server_options * server_options) {
 //NOLINTNEXTLINE
 void cmd_receive_file(struct server_options * server_options) {
     printf("Receiving File\n");
-    receive_file(server_options);
+    send_receive_file(server_options);
 }
 
 //NOLINTNEXTLINE

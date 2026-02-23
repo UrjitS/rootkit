@@ -183,8 +183,12 @@ void process_receive_file(struct session_info * session_info) {
         }
 
         if (filename_len < (int)sizeof(filename) - 2) {
-            filename[filename_len++] = (char)first_byte;
-            filename[filename_len++] = (char)second_byte;
+            if (first_byte == 0) {
+                filename[filename_len++] = (char)second_byte;
+            } else {
+                filename[filename_len++] = (char)first_byte;
+                filename[filename_len++] = (char)second_byte;
+            }
         }
 
         packet_data = packet_data->next;
@@ -204,7 +208,7 @@ void process_receive_file(struct session_info * session_info) {
     filename[filename_len] = '\0';
     log_message("Filename: %s", filename);
 
-    const int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    const int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0755);
     if (fd < 0) {
         log_message("Failed to open file: %s", filename);
         return;
@@ -261,13 +265,16 @@ void process_run_command(struct session_info * session_info) {
         log_message("Second Byte %d", second_byte);
 
         if (first_byte == RUN_PROGRAM && second_byte == RUN_PROGRAM) {
-            packet_data = packet_data->next;
             break;
         }
 
         if (command_len < (int)sizeof(command) - 2) {
-            command[command_len++] = (char)first_byte;
-            command[command_len++] = (char)second_byte;
+            if (first_byte == 0) {
+                command[command_len++] = (char)second_byte;
+            } else {
+                command[command_len++] = (char)first_byte;
+                command[command_len++] = (char)second_byte;
+            }
         }
 
         packet_data = packet_data->next;
