@@ -15,6 +15,8 @@
 #include <netinet/udp.h>
 #include "protocol.h"
 
+_Atomic uint16_t sequence_number = 1;
+
 int listen_port_knock(const struct client_options * client_options) {
     bool received_knock = false;
     const int fd = create_udp_socket();
@@ -425,8 +427,9 @@ struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
     fflush(stdout);
 
     struct packet_data * packet_data = malloc(sizeof(struct packet_data));;
-    packet_data->sequence_number = (uint16_t) ip->id;
+    packet_data->sequence_number = ntohs(ip->id);
     packet_data->data = (uint16_t) host_src;
+    packet_data->next = NULL;
 
     return packet_data;
 }
