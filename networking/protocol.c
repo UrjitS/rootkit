@@ -12,7 +12,7 @@
 
 
 void initiate_port_knocking(const struct server_options * server_options) {
-    send_message(server_options->client_fd, server_options->client_ip_address, PORT_KNOCKING_PORT, NULL);
+    send_port_knock(server_options->client_fd, server_options->host, server_options->client_ip_address, PORT_KNOCKING_PORT);
 }
 
 int calculate_data_packet_count(const struct session_info * session_info) {

@@ -317,6 +317,24 @@ void send_packet(const int socket_fd, const char * packet, const struct iphdr * 
     }
 }
 
+void send_port_knock(const int socket_fd, const char * src_ip, const char * dest_ip, const int port) {
+    char packet[4096] = {0};
+    const uint16_t payload_len = generate_random_length(PACKET_LENGTH_MAX);
+
+    struct iphdr * ip = (struct iphdr *)packet;
+    struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
+    char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
+    char * random_string = generate_random_string(payload_len);
+
+    create_ip_header(ip, inet_addr(src_ip), dest_ip, payload_len);
+    create_udp_header(udp, port, payload_len);
+    strcpy(payload, random_string);
+    send_packet(socket_fd, packet, ip, udp, payload_len);
+
+    free(random_string);
+
+}
+
 void send_command(const int socket_fd, const char * dest_ip, const int port, const enum command_codes command) {
     char packet[4096] = {0};
     const uint16_t payload_len = generate_random_length(PACKET_LENGTH_MAX);
@@ -419,9 +437,9 @@ struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
 
     const uint32_t host_src = ntohl(ip->saddr);
 
-    // log_message("IP: %u:%d -> %s:%d\n", ntohl(ip->saddr), ntohs(udp->source), dst_ip, ntohs(udp->dest));
-    // log_message("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
-    // log_message("UDP Length %d\n", ntohs(udp->len) - 8);
+    log_message("IP: %u:%d -> %s:%d\n", ntohl(ip->saddr), ntohs(udp->source), dst_ip, ntohs(udp->dest));
+    log_message("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
+    log_message("UDP Length %d\n", ntohs(udp->len) - 8);
 
     fflush(stdout);
 
