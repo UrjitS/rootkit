@@ -489,7 +489,7 @@ void handle_response(struct session_info * session_info) {
         log_message("First Byte %d", first_byte);
         log_message("Second Byte %d", second_byte);
 
-        if (first_byte == RUN_PROGRAM && second_byte == RUN_PROGRAM) {
+        if (first_byte == RESPONSE && second_byte == RESPONSE) {
             break;
         }
 
@@ -511,5 +511,5 @@ void handle_response(struct session_info * session_info) {
 
     response[response_length] = '\0';
 
-    log_message("Response received: %s", response);
+    log_message("Response received:\n%s", response);
 }

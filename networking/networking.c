@@ -326,7 +326,8 @@ void send_port_knock(const int socket_fd, const char * src_ip, const char * dest
     char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
     char * random_string = generate_random_string(payload_len);
 
-    create_ip_header(ip, inet_addr(src_ip), dest_ip, payload_len);
+    create_ip_header(ip, 0, dest_ip, payload_len);
+    ip->saddr = inet_addr(src_ip);
     create_udp_header(udp, port, payload_len);
     strcpy(payload, random_string);
     send_packet(socket_fd, packet, ip, udp, payload_len);
