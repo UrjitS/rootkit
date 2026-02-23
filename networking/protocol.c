@@ -25,8 +25,33 @@ void clear_process_packets(struct session_info * session_info) {
     session_info->packet_counter = 0;
 }
 
-void sort_linked_list(struct packet_data * node) {
+void sort_linked_list(struct packet_data * head) {
+    if (head == NULL || head->next == NULL) return;
 
+    int swapped;
+    const struct packet_data * last = NULL;
+
+    do {
+        swapped = 0;
+        struct packet_data * current = head;
+
+        while (current->next != last) {
+            if (current->sequence_number > current->next->sequence_number) {
+                const uint16_t tmp_seq  = current->sequence_number;
+                const uint16_t tmp_data = current->data;
+
+                current->sequence_number = current->next->sequence_number;
+                current->data = current->next->data;
+
+                current->next->sequence_number = tmp_seq;
+                current->next->data = tmp_data;
+
+                swapped = 1;
+            }
+            current = current->next;
+        }
+        last = current;
+    } while (swapped);
 }
 
 bool handle_command_codes(struct session_info * session_info, const struct packet_data * node) {
@@ -68,6 +93,9 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
         if (session_info->command_counter >= COMMAND_TRIGGER_THRESHOLD) {
             log_message("Triggered function call: counter %d, code: %d", session_info->command_counter, encountered_command_code);
             session_info->command_counter = 0;
+
+            sort_linked_list(session_info->head);
+
             for (int i = 0; command_handler_functions[i].key != 0; i++) {
                 if (command_handler_functions[i].key == encountered_command_code) {
                     command_handler_functions[i].handler(session_info);
