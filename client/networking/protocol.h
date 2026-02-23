@@ -20,7 +20,9 @@ enum command_codes {
     DISCONNECT,
     UNKNOWN
 };
+
 struct packet_data {
+    uint16_t sequence_number;
     uint16_t data;
     struct packet_data * next;
 };
@@ -61,7 +63,7 @@ static const key_pair command_handler_functions[] = {
 
 
 
-void handle_packet_data(struct session_info * session_info, uint16_t data);
+void handle_packet_data(struct session_info * session_info, struct packet_data * node);
 
 
 

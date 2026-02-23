@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-
+#include "protocol.h"
 
 int listen_port_knock(const struct client_options * client_options) {
     bool received_knock = false;
@@ -283,7 +283,7 @@ void create_ip_header(struct iphdr * ip, const uint32_t source_ip, const char * 
     ip->version = 4;
     ip->tos = 0;
     ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len);
-    ip->id = htons(0x1234);
+    ip->id = htons(sequence_number);
     ip->frag_off = 0;
     ip->ttl = 64;
     ip->protocol = IPPROTO_UDP;
@@ -311,6 +311,7 @@ void send_packet(const int socket_fd, const char * packet, const struct iphdr * 
     }
     else {
         printf("Sent raw UDP packet\n");
+        sequence_number++;
     }
 }
 
@@ -390,21 +391,21 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
     }
 }
 
-uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
+struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
     if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct udphdr))) {
-        return 0;
+        return NULL;
     }
 
     const struct iphdr * ip = (struct iphdr *)buffer;
 
     if (ip->protocol != IPPROTO_UDP) {
-        return 0;
+        return NULL;
     }
 
     const struct udphdr * udp = (struct udphdr *)(buffer + (ip->ihl * 4));
 
     if (ntohs(udp->dest) != 8080) {
-        return 0;
+        return NULL;
     }
 
     const unsigned long payload_len = n - (ip->ihl * 4) - sizeof(struct udphdr);
@@ -423,7 +424,11 @@ uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
 
     fflush(stdout);
 
-    return (uint16_t) host_src;
+    struct packet_data * packet_data = malloc(sizeof(struct packet_data));;
+    packet_data->sequence_number = (uint16_t) ip->id;
+    packet_data->data = (uint16_t) host_src;
+
+    return packet_data;
 }
 
 

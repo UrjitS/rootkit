@@ -68,7 +68,7 @@ void log_message(const char *format, ...) {
 void print_linked_list(const struct packet_data * head) {
     const struct packet_data * packet_data = head;
     while (packet_data != NULL) {
-        log_message("Node data: %d", packet_data->data);
+        log_message("Node seq: %d, data: %d", packet_data->sequence_number, packet_data->data);
         packet_data = packet_data->next;
     }
 }

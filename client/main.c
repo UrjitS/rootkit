@@ -156,12 +156,9 @@ int main(const int argc, char * argv[]) {
     ssize_t n = 0;
     char buffer[4096];
 
-    struct packet_data * head = malloc(sizeof(struct packet_data));
-    head->data = 0;
-    head->next = NULL;
 
     struct session_info session_info;
-    session_info.head = head;
+    session_info.head = NULL;
     session_info.command_counter = 0;
     session_info.packet_counter = 0;
     session_info.data_counter = 0;
@@ -203,9 +200,9 @@ int main(const int argc, char * argv[]) {
             }
 
             if (n > 0) {
-                const uint16_t data = parse_raw_packet(buffer, n);
-                if (data != 0) {
-                    handle_packet_data(&session_info, data);
+                struct packet_data * node = parse_raw_packet(buffer, n);
+                if (node != NULL) {
+                    handle_packet_data(&session_info, node);
                 }
                 // Send reply to knock source
                 // printf("Sending reply to %s:%d\n", knock_source_ip, REPLY_DEST_PORT);

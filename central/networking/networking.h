@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include "protocol.h"
 
+extern _Atomic uint16_t sequence_number;
+
 int create_raw_udp_socket();
 int bind_raw_socket(int socket_fd, char * ip_address);
 void send_message(int socket_fd, const char *dest_ip, int port, const char *message);

