@@ -187,6 +187,7 @@ void send_command(const int socket_fd, const char * dest_ip, const int port, con
     strcpy(payload, random_string);
 
     send_packet(socket_fd, packet, ip, udp, payload_len);
+    ip->id = htons(sequence_number);
     send_packet(socket_fd, packet, ip, udp, payload_len);
     free(random_string);
 }
@@ -241,21 +242,21 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
     }
 }
 
-uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
+struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
     if (n < (ssize_t)(sizeof(struct iphdr) + sizeof(struct udphdr))) {
-        return 0;
+        return NULL;
     }
 
     const struct iphdr * ip = (struct iphdr *)buffer;
 
     if (ip->protocol != IPPROTO_UDP) {
-        return 0;
+        return NULL;
     }
 
     const struct udphdr * udp = (struct udphdr *)(buffer + (ip->ihl * 4));
 
     if (ntohs(udp->dest) != 8080) {
-        return 0;
+        return NULL;
     }
 
     const unsigned long payload_len = n - (ip->ihl * 4) - sizeof(struct udphdr);
@@ -266,12 +267,18 @@ uint16_t parse_raw_packet(const char * buffer, const ssize_t n) {
     inet_ntop(AF_INET, &(ip->saddr), src_ip, INET_ADDRSTRLEN);
     inet_ntop(AF_INET, &(ip->daddr), dst_ip, INET_ADDRSTRLEN);
 
-    // printf("IP: %s:%d -> %s:%d\n", src_ip, ntohs(udp->source), dst_ip, ntohs(udp->dest));
-    // printf("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
-    // printf("UDP Length %d\n", ntohs(udp->len) - 8);
+    const uint32_t host_src = ntohl(ip->saddr);
+
+    // log_message("IP: %u:%d -> %s:%d\n", ntohl(ip->saddr), ntohs(udp->source), dst_ip, ntohs(udp->dest));
+    // log_message("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
+    // log_message("UDP Length %d\n", ntohs(udp->len) - 8);
 
     fflush(stdout);
 
-    return ntohs(udp->len) - 8;
-}
+    struct packet_data * packet_data = malloc(sizeof(struct packet_data));;
+    packet_data->sequence_number = ntohs(ip->id);
+    packet_data->data = (uint16_t) host_src;
+    packet_data->next = NULL;
 
+    return packet_data;
+}

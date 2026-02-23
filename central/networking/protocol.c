@@ -123,7 +123,7 @@ void receive_file(const struct server_options * server_options) {
         // Send over the filename and the FILENAME command
         send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
 
-        sleep(10);
+        sleep(2);
         send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
 
         size_t chunk_count = 0;
@@ -145,7 +145,7 @@ void receive_file(const struct server_options * server_options) {
 
     free(message);
 
-    sleep(10);
+    sleep(2);
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RECEIVE_FILE);
 
     if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {

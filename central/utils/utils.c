@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,20 @@
 
 
 _Atomic int exit_flag = false;
+
+bool parse_int(const char *s, int *out)
+{
+    char *end = NULL;
+    errno = 0;
+
+    const long v = strtol(s, &end, 10);
+
+    if (errno != 0 || end == s || *end != '\0' || v < 0 || v > 65535)
+        return false;
+
+    *out = (int)v;
+    return true;
+}
 
 unsigned short checksum(void *b, int len)
 {
@@ -53,33 +68,20 @@ void log_message(const char *format, ...) {
 
 void print_linked_list(const struct packet_data * head) {
     const struct packet_data * packet_data = head;
-    if (packet_data->next == NULL) {
-        log_message("Node data: %d", packet_data->data);
-        return;
-    }
-
-    while (packet_data->next != NULL) {
-        log_message("Node data: %d", packet_data->data);
+    while (packet_data != NULL) {
+        log_message("Node seq: %d, data: %d", packet_data->sequence_number, packet_data->data);
         packet_data = packet_data->next;
     }
-
-    log_message("Node data: %d", packet_data->data);
 }
+
 
 void free_linked_list(struct packet_data * head) {
     struct packet_data * packet_data = head;
-    if (packet_data->next == NULL) {
+    while (packet_data != NULL) {
+        struct packet_data * next = packet_data->next;
         free(packet_data);
-        return;
+        packet_data = next;
     }
-
-    while (packet_data->next != NULL) {
-        struct packet_data *previous_node = packet_data;
-        packet_data = packet_data->next;
-        free(previous_node);
-    }
-
-    free(packet_data);
 }
 
 int generate_random_length(const int max_length) {
@@ -111,3 +113,4 @@ char * generate_random_string(const size_t length) {
 
     return dest;
 }
+

@@ -29,6 +29,7 @@ enum command_codes {
 };
 
 struct packet_data {
+    uint16_t sequence_number;
     uint16_t data;
     struct packet_data * next;
 };

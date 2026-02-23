@@ -335,8 +335,8 @@ void send_command(const int socket_fd, const char * dest_ip, const int port, con
     strcpy(payload, random_string);
 
     send_packet(socket_fd, packet, ip, udp, payload_len);
+    ip->id = htons(sequence_number);
     send_packet(socket_fd, packet, ip, udp, payload_len);
-
     free(random_string);
 }
 
@@ -365,14 +365,13 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
     for (int index = 0; index < length; index += 2) {
         // Only 1 byte remaining
         if (index + 2 > length) {
-            src = (src & 0xFFFFFF00) | (unsigned char) message[index];
+            src = (src & 0xFFFF0000) | (unsigned char) message[index];
             char * random_string = generate_random_string(payload_len);
 
             create_ip_header(ip, src, dest_ip, payload_len);
             create_udp_header(udp, port, payload_len);
             strcpy(payload, random_string);
             send_packet(socket_fd, packet, ip, udp, payload_len);
-
             free(random_string);
             return;
         }
