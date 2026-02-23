@@ -18,6 +18,7 @@ struct server_options {
 };
 
 struct client_options {
+    int client_fd;
     char * host;
     char * interface_name;
     int port;
