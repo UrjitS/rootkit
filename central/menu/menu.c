@@ -59,7 +59,7 @@ void cmd_watch_directory(struct server_options * server_options) {
 //NOLINTNEXTLINE
 void cmd_run_program(struct server_options * server_options) {
     printf("Running specified program\n");
-    send_run_program(server_options->client_fd);
+    send_run_program(server_options);
 }
 
 void cmd_show_help() {
@@ -74,6 +74,7 @@ void cmd_show_help() {
 
     printf("--------------------------------------------------------------------\n");
     printf("\n");
+    fflush(stdout);
 }
 
 

