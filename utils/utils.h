@@ -2,12 +2,20 @@
 #define ROOTKIT_UTILS_H
 
 #include <stdbool.h>
-#include "networking/protocol.h"
+#include "protocol.h"
 
 extern _Atomic int exit_flag;
 
 #define PACKET_LENGTH_MAX 50
 #define IP_MAX 10
+
+struct server_options {
+    char * host;
+    char * interface_name;
+    char * client_ip_address;
+    int port;
+    int client_fd;
+};
 
 struct client_options {
     char * host;
@@ -17,7 +25,6 @@ struct client_options {
     int poll_ms;
     char * knock_source_ip;  // IP that sent the knock
 };
-
 
 bool parse_int(const char *s, int *out);
 unsigned short checksum(void *b, int len);

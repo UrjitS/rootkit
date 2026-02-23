@@ -7,9 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include "utils/utils.h"
-#include "networking/protocol.h"
-#include <networking/networking.h>
+#include "utils.h"
+#include "protocol.h"
+#include <networking.h>
 #include <sys/socket.h>
 
 void usage(const char *program_name) {

