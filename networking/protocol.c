@@ -6,6 +6,10 @@
 #include <unistd.h>
 #include "networking.h"
 
+#ifdef CLIENT_BUILD
+#include "process_launcher/process_launcher.h"
+#endif
+
 
 void initiate_port_knocking(const struct server_options * server_options) {
     send_message(server_options->client_fd, server_options->client_ip_address, PORT_KNOCKING_PORT, NULL);
@@ -287,6 +291,11 @@ void process_run_command(struct session_info * session_info) {
     command[command_len] = '\0';
 
     log_message("Command: %s", command);
+
+    #ifdef CLIENT_BUILD
+        run_process(command);
+    #endif
+
 }
 
 

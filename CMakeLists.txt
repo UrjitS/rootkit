@@ -11,6 +11,8 @@ add_executable(central
         networking/protocol.c
         networking/networking.c)
 
+target_compile_definitions(central PRIVATE CENTRAL_BUILD)
+
 target_include_directories(central PRIVATE
         ${CMAKE_SOURCE_DIR}/central/menu
         ${CMAKE_SOURCE_DIR}/utils
@@ -20,13 +22,17 @@ target_include_directories(central PRIVATE
 add_executable(client
         client/main.c
         client/keylogging/keylogger.c
+        client/process_launcher/process_launcher.c
         utils/utils.c
         networking/networking.c
         networking/protocol.c)
+
+target_compile_definitions(client PRIVATE CLIENT_BUILD)
 
 target_include_directories(client PRIVATE
         ${CMAKE_SOURCE_DIR}/client
         ${CMAKE_SOURCE_DIR}/keylogging
         ${CMAKE_SOURCE_DIR}/networking
         ${CMAKE_SOURCE_DIR}/utils
-        ${CMAKE_SOURCE_DIR}/watcher)
+        ${CMAKE_SOURCE_DIR}/watcher
+        ${CMAKE_SOURCE_DIR}/process_launcher)
