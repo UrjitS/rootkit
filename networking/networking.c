@@ -438,9 +438,9 @@ struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
 
     const uint32_t host_src = ntohl(ip->saddr);
 
-    log_message("IP: %u:%d -> %s:%d\n", ntohl(ip->saddr), ntohs(udp->source), dst_ip, ntohs(udp->dest));
-    log_message("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
-    log_message("UDP Length %d\n", ntohs(udp->len) - 8);
+    // log_message("IP: %u:%d -> %s:%d\n", ntohl(ip->saddr), ntohs(udp->source), dst_ip, ntohs(udp->dest));
+    // log_message("Total Length: %d bytes, Payload: %lu bytes\n", ntohs(ip->tot_len), payload_len);
+    // log_message("UDP Length %d\n", ntohs(udp->len) - 8);
 
     fflush(stdout);
 
