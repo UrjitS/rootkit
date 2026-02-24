@@ -237,7 +237,7 @@ void process_send_file(struct session_info * session_info) {
         log_message("First Byte %d", first_byte);
         log_message("Second Byte %d", second_byte);
 
-        if (first_byte == RECEIVE_FILE || second_byte == RECEIVE_FILE) {
+        if (first_byte == SEND_FILE || second_byte == SEND_FILE) {
             break;
         }
 
