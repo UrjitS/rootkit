@@ -329,6 +329,10 @@ void process_receive_file(struct session_info * session_info) {
 
     fclose(file);
     free(file_buffer);
+
+    usleep(500000);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, SEND_FILE);
+
 #endif
 
 }
