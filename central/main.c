@@ -217,8 +217,6 @@ int main(const int argc, char * argv[]) {
         fflush(stdout);
     }
 
-    print_linked_list(session_info.head);
-
     close(raw_socket);
     free_linked_list(session_info.head);
 
