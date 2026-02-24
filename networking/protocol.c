@@ -29,6 +29,19 @@ void clear_process_packets(struct session_info * session_info) {
     session_info->packet_counter = 0;
 }
 
+static int sequence_greater_than(const uint16_t a, const uint16_t b) {
+    // If the gap is more than half the uint16_t range, wraparound has occurred
+    // e.g. a=65535, b=0 -> b is actually ahead of a
+    // e.g. a=1,     b=65535 -> a is actually ahead of b
+    const uint16_t half = 0x8000; // 32768
+    if (a == b) return 0;
+    // The "distance" from b to a going forward
+    const uint16_t forward_dist = (uint16_t)(a - b);
+    // If going forward from b to a is more than half the range,
+    // then a is actually behind b (wraparound)
+    return forward_dist < half;
+}
+
 void sort_linked_list(struct packet_data * head) {
     if (head == NULL || head->next == NULL) return;
 
@@ -40,15 +53,15 @@ void sort_linked_list(struct packet_data * head) {
         struct packet_data * current = head;
 
         while (current->next != last) {
-            if (current->sequence_number > current->next->sequence_number) {
+            if (sequence_greater_than(current->sequence_number, current->next->sequence_number)) {
                 const uint16_t tmp_seq  = current->sequence_number;
                 const uint16_t tmp_data = current->data;
 
                 current->sequence_number = current->next->sequence_number;
-                current->data = current->next->data;
+                current->data            = current->next->data;
 
                 current->next->sequence_number = tmp_seq;
-                current->next->data = tmp_data;
+                current->next->data            = tmp_data;
 
                 swapped = 1;
             }
