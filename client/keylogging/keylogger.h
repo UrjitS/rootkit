@@ -35,7 +35,7 @@ void print_modifiers(void);
 int fix_parallels_key_code(int code, uint32_t scan_code, int *was_fixed);
 int verify_device(int fd);
 // void print_device_info(int fd);
-void print_relative_time(struct timeval *ev_time);
+void print_relative_time(const struct timeval *ev_time);
 
 
 void discover_keyboards(void);
