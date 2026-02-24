@@ -90,7 +90,7 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             encountered_command_code = RECEIVE_FILE;
             break;
         default:
-            log_message("Default\n");
+            // log_message("Default\n");
             is_command_code = false;
             break;
     }
@@ -185,8 +185,8 @@ void process_send_file(struct session_info * session_info) {
     while (packet_data != NULL) {
         const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
         const uint8_t second_byte = (packet_data->data) & 0xFF;
-        log_message("First Byte %d", first_byte);
-        log_message("Second Byte %d", second_byte);
+        // log_message("First Byte %d", first_byte);
+        // log_message("Second Byte %d", second_byte);
 
         if (first_byte == FILENAME && second_byte == FILENAME) {
             packet_data = packet_data->next;
@@ -234,8 +234,8 @@ void process_send_file(struct session_info * session_info) {
     while (packet_data != NULL) {
         const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
         const uint8_t second_byte = (packet_data->data) & 0xFF;
-        log_message("First Byte %d", first_byte);
-        log_message("Second Byte %d", second_byte);
+        // log_message("First Byte %d", first_byte);
+        // log_message("Second Byte %d", second_byte);
 
         if (first_byte == SEND_FILE || second_byte == SEND_FILE) {
             break;

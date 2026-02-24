@@ -9,6 +9,15 @@
 
 _Atomic int exit_flag = false;
 
+static bool rng_seeded = false;
+
+static void ensure_rng_seeded(void) {
+    if (!rng_seeded) {
+        srand((unsigned int)time(NULL));
+        rng_seeded = true;
+    }
+}
+
 bool parse_int(const char *s, int *out)
 {
     char *end = NULL;
@@ -85,6 +94,7 @@ void free_linked_list(struct packet_data * head) {
 }
 
 int generate_random_length(const int max_length) {
+    ensure_rng_seeded();
     const int random_number = rand() % (max_length + 1);
     if (random_number == 0) {
         return random_number + 1;
@@ -100,7 +110,7 @@ char random_char(const int index) {
 char * generate_random_string(const size_t length) {
     if (length == 0) return NULL;
 
-    srand(time(NULL));
+    ensure_rng_seeded();
     char * dest = malloc(length);
     int i;
 

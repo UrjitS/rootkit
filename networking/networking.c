@@ -408,6 +408,7 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
 
         free(random_string);
         payload_len = generate_random_length(PACKET_LENGTH_MAX); // rand length per packet
+        usleep(1000); // 1ms between packets to prevent socket buffer overflow and drops
     }
 }
 
