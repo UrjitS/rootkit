@@ -143,13 +143,8 @@ int main(const int argc, char * argv[]) {
 
     char buffer[4096];
 
-    struct packet_data * head = malloc(sizeof(struct packet_data));
-    head->sequence_number = 0;
-    head->data = 0;
-    head->next = NULL;
-
     struct session_info session_info;
-    session_info.head = head;
+    session_info.head = NULL;
     session_info.command_counter = 0;
     session_info.packet_counter = 0;
     session_info.data_counter = 0;
