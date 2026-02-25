@@ -21,10 +21,11 @@ int calculate_data_packet_count(const struct session_info * session_info) {
 
 void clear_process_packets(struct session_info * session_info) {
     free_linked_list(session_info->head);
-    struct packet_data * head = malloc(sizeof(struct packet_data));
-    head->data = 0;
-    head->next = NULL;
-    session_info->head = head;
+    // struct packet_data * head = malloc(sizeof(struct packet_data));
+    // head->sequence_number = 0;
+    // head->data = 0;
+    // head->next = NULL;
+    session_info->head = NULL;
     session_info->data_counter = 0;
     session_info->packet_counter = 0;
 }
