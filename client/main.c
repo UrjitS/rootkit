@@ -28,6 +28,7 @@ static void signal_handler(const int sig_no) {
     if (sig_no == SIGINT || sig_no == SIGTERM) {
         fprintf(stderr, "Received signal %d, shutting down\n", sig_no);
         exit_flag = true;
+        connection_loop = true;
     }
 }
 
@@ -95,6 +96,35 @@ int parse_arguments(const int argc, char * argv[], struct client_options * clien
     return 0;
 }
 
+int wait_for_port_knock(struct client_options * client_options) {
+    int return_val = listen_port_knock(client_options);
+    if (return_val == -1) {
+        fprintf(stderr, "Error while listening for port knock\n");
+        return EXIT_FAILURE;
+    }
+    connection_loop = true;
+
+    const int raw_socket = create_raw_udp_socket();
+    if (raw_socket == -1) {
+        fprintf(stderr, "Error creating raw socket\n");
+        return EXIT_FAILURE;
+    }
+
+    return_val = bind_raw_socket(raw_socket, client_options->interface_name);
+    if (return_val == -1) {
+        fprintf(stderr, "Error binding raw socket to interface\n");
+        close(raw_socket);
+        return EXIT_FAILURE;
+    }
+
+    client_options->client_fd = raw_socket;
+
+    const int flags = fcntl(raw_socket, F_GETFL, 0);
+    fcntl(raw_socket, F_SETFL, flags | O_NONBLOCK);
+
+
+    return EXIT_SUCCESS;
+}
 
 int main(const int argc, char * argv[]) {
     // Check if running as root
@@ -131,88 +161,69 @@ int main(const int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
-    return_val = listen_port_knock(&client_options);
-    if (return_val == -1) {
-        fprintf(stderr, "Error while listening for port knock\n");
-        return EXIT_FAILURE;
-    }
-
-    const int raw_socket = create_raw_udp_socket();
-    if (raw_socket == -1) {
-        fprintf(stderr, "Error creating raw socket\n");
-        return EXIT_FAILURE;
-    }
-
-    return_val = bind_raw_socket(raw_socket, client_options.interface_name);
-    if (return_val == -1) {
-        fprintf(stderr, "Error binding raw socket to interface\n");
-        close(raw_socket);
-        return EXIT_FAILURE;
-    }
-
-    client_options.client_fd = raw_socket;
-
-    const int flags = fcntl(raw_socket, F_GETFL, 0);
-    fcntl(raw_socket, F_SETFL, flags | O_NONBLOCK);
-
-    ssize_t n = 0;
-    char buffer[4096];
-
-
-    struct session_info session_info;
-    session_info.head = NULL;
-    session_info.client_options_ = &client_options;
-    session_info.command_counter = 0;
-    session_info.packet_counter = 0;
-    session_info.data_counter = 0;
-    session_info.last_command_code = UNKNOWN;
-
     while (!exit_flag) {
-        memset(buffer, 0, sizeof(buffer));
-
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET(raw_socket, &rfds);
-
-        struct timeval tv;
-        tv.tv_sec = 0;
-        tv.tv_usec = 100000;
-
-        const int r = select(raw_socket + 1, &rfds, NULL, NULL, &tv);
-
-        if (r < 0) {
-            if (errno == EINTR)
-                continue;
-            perror("select");
-            break;
+        return_val = wait_for_port_knock(&client_options);
+        if (return_val == EXIT_FAILURE) {
+            return EXIT_FAILURE;
         }
+        ssize_t n = 0;
+        char buffer[RESPONSE_BUFFER_LENGTH];
 
-        if (r == 0) {
-            continue;
-        }
+        struct session_info session_info;
+        session_info.head = NULL;
+        session_info.client_options_ = &client_options;
+        session_info.command_counter = 0;
+        session_info.packet_counter = 0;
+        session_info.data_counter = 0;
+        session_info.last_command_code = UNKNOWN;
 
-        if (FD_ISSET(raw_socket, &rfds)) {
-            n = recv(raw_socket, buffer, sizeof(buffer), 0);
+        while (connection_loop) {
+            memset(buffer, 0, sizeof(buffer));
 
-            if (n < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            fd_set fds;
+            FD_ZERO(&fds);
+            FD_SET(client_options.client_fd, &fds);
+
+            struct timeval tv;
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
+
+            const int r = select(client_options.client_fd + 1, &fds, NULL, NULL, &tv);
+
+            if (r < 0) {
+                if (errno == EINTR)
                     continue;
-                }
-                perror("recv");
+                perror("select");
                 break;
             }
 
-            if (n > 0) {
-                struct packet_data * node = parse_raw_packet(buffer, n);
-                if (node != NULL) {
-                    handle_packet_data(&session_info, node);
+            if (r == 0) {
+                continue;
+            }
+
+            if (FD_ISSET(client_options.client_fd, &fds)) {
+                n = recv(client_options.client_fd, buffer, sizeof(buffer), 0);
+
+                if (n < 0) {
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        continue;
+                    }
+                    perror("recv");
+                    break;
+                }
+
+                if (n > 0) {
+                    struct packet_data * node = parse_raw_packet(buffer, n);
+                    if (node != NULL) {
+                        handle_packet_data(&session_info, node);
+                    }
                 }
             }
         }
+        free_linked_list(session_info.head);
     }
 
-    close(raw_socket);
-    free_linked_list(session_info.head);
+    close(client_options.client_fd);
 
     return EXIT_SUCCESS;
 }

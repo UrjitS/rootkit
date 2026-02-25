@@ -8,6 +8,7 @@
 
 
 _Atomic int exit_flag = false;
+_Atomic int connection_loop = false;
 
 static bool rng_seeded = false;
 

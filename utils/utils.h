@@ -5,6 +5,7 @@
 #include "protocol.h"
 
 extern _Atomic int exit_flag;
+extern _Atomic int connection_loop;
 
 #define PACKET_LENGTH_MAX 50
 #define IP_MAX 10

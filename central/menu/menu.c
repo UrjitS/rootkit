@@ -9,7 +9,7 @@
 //NOLINTNEXTLINE
 void cmd_disconnect(struct server_options * server_options) {
     printf("Disconnecting from client and exiting program\n");
-    send_disconnect(server_options->client_fd);
+    send_disconnect(server_options);
     exit_flag = true;
 }
 
