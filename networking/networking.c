@@ -410,7 +410,6 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
         payload_len = generate_random_length(PACKET_LENGTH_MAX);
         usleep(2500);
     }
-    usleep(500000);
 }
 
 struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
