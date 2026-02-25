@@ -152,8 +152,6 @@ void handle_packet_data(struct session_info * session_info, struct packet_data *
         packet_data = packet_data->next;
     }
 
-    // Sort LL
-
     // Add data
     packet_data->next = node;
     session_info->packet_counter++;
@@ -655,4 +653,5 @@ void handle_response(struct session_info * session_info) {
     response[response_length] = '\0';
 
     log_message("Response received:\n%s", response);
+    fflush(stdout);
 }
