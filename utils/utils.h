@@ -9,6 +9,7 @@ extern _Atomic int connection_loop;
 
 #define PACKET_LENGTH_MAX 50
 #define IP_MAX 10
+#define KEYLOG_FILE_PATH "./keylog.txt"
 
 struct server_options {
     char * host;
