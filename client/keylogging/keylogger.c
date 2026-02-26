@@ -334,7 +334,16 @@ int verify_device(const int fd) {
 /**
  * Capture and display key events from device
  */
-void capture_keys(const char *device_path) {
+void * capture_keys(void * arg) {
+    const struct session_info * session_info = arg;
+    char * device_path = session_info->device_path;
+    const _Atomic int * stop_thread_flag = session_info->run_keylogger;
+
+    if (device_path == NULL) {
+        log_message("Device path is null");
+        pthread_exit(NULL);
+    }
+
     struct input_event ev;
     fd_set readfds;
     struct timeval tv;
@@ -344,12 +353,12 @@ void capture_keys(const char *device_path) {
     if (fd < 0) {
         perror("Error opening device");
         fprintf(stderr, "Hint: Try running with sudo\n");
-        return;
+        return NULL;
     }
 
     if (!verify_device(fd)) {
         close(fd);
-        return;
+        return NULL;
     }
 
     printf("Capturing key events from: %s\n", device_path);
@@ -358,7 +367,7 @@ void capture_keys(const char *device_path) {
            "RelTime", "Type", "Code", "Value", "Modifiers");
     printf("==================================================================================\n");
 
-    while (!exit_flag) {
+    while (!*stop_thread_flag) {
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
 
@@ -392,8 +401,7 @@ void capture_keys(const char *device_path) {
                 perror("read error");
                 break;
             }
-            fprintf(stderr, "Warning: Short read (%zd bytes, expected %zu)\n",
-                    n, sizeof(ev));
+            fprintf(stderr, "Warning: Short read (%zd bytes, expected %zu)\n", n, sizeof(ev));
             continue;
         }
 
@@ -465,6 +473,9 @@ void capture_keys(const char *device_path) {
 
     close(fd);
     printf("\nCapture stopped.\n");
+
+    free(device_path);
+    return NULL;
 }
 
 /**

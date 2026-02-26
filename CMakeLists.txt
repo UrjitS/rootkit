@@ -18,6 +18,7 @@ target_include_directories(central PRIVATE
         ${CMAKE_SOURCE_DIR}/utils
         ${CMAKE_SOURCE_DIR}/networking)
 
+find_package(Threads REQUIRED)
 
 add_executable(client
         client/main.c
@@ -36,3 +37,5 @@ target_include_directories(client PRIVATE
         ${CMAKE_SOURCE_DIR}/utils
         ${CMAKE_SOURCE_DIR}/watcher
         ${CMAKE_SOURCE_DIR}/process_launcher)
+
+target_link_libraries(client Threads::Threads)
