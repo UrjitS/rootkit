@@ -175,6 +175,7 @@ int main(const int argc, char * argv[]) {
         session_info.command_counter = 0;
         session_info.packet_counter = 0;
         session_info.data_counter = 0;
+        session_info.run_keylogger = false;
         session_info.last_command_code = UNKNOWN;
 
         while (connection_loop) {

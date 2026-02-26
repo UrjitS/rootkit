@@ -337,7 +337,7 @@ int verify_device(const int fd) {
 void * capture_keys(void * arg) {
     const struct session_info * session_info = arg;
     char * device_path = session_info->device_path;
-    const _Atomic int * stop_thread_flag = session_info->run_keylogger;
+    _Atomic int run_keylogger = session_info->run_keylogger;
 
     if (device_path == NULL) {
         log_message("Device path is null");
@@ -367,7 +367,7 @@ void * capture_keys(void * arg) {
            "RelTime", "Type", "Code", "Value", "Modifiers");
     printf("==================================================================================\n");
 
-    while (!*stop_thread_flag) {
+    while (run_keylogger) {
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
 
@@ -469,6 +469,7 @@ void * capture_keys(void * arg) {
             fflush(stdout);
             // Don't set printed_since_syn for non-KEY events
         }
+        run_keylogger = session_info->run_keylogger;
     }
 
     close(fd);
