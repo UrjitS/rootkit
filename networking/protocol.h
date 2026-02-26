@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define COMMAND_TRIGGER_THRESHOLD 2
 #define RECEIVING_PORT 8080

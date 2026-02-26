@@ -353,9 +353,10 @@ void send_command(const int socket_fd, const char * dest_ip, const int port, con
     create_udp_header(udp, port, payload_len);
     strcpy(payload, random_string);
 
-    send_packet(socket_fd, packet, ip, udp, payload_len);
-    ip->id = htons(sequence_number);
-    send_packet(socket_fd, packet, ip, udp, payload_len);
+    for (int i = 0; i < COMMAND_TRIGGER_THRESHOLD; ++i) {
+        send_packet(socket_fd, packet, ip, udp, payload_len);
+        ip->id = htons(sequence_number);
+    }
     free(random_string);
 }
 
