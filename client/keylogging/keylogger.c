@@ -332,6 +332,7 @@ int verify_device(const int fd) {
 /**
  * Capture and display key events from device
  */
+// NOLINTNEXTLINE
 void * capture_keys(void * arg) {
     struct session_info * session_info = arg;
     char * device_path = session_info->device_path;
