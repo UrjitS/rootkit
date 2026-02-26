@@ -28,7 +28,7 @@ static void signal_handler(const int sig_no) {
     if (sig_no == SIGINT || sig_no == SIGTERM) {
         fprintf(stderr, "Received signal %d, shutting down\n", sig_no);
         exit_flag = true;
-        connection_loop = true;
+        connection_loop = false;
     }
 }
 

