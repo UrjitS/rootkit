@@ -193,7 +193,7 @@ void handle_send_watch(struct session_info * session_info) {
 #ifdef CLIENT_BUILD
     const struct packet_data * packet_data = session_info->head;
 
-    session_info->device_path = malloc(MESSAGE_BUFFER_LENGTH);
+    session_info->watch_path = malloc(MESSAGE_BUFFER_LENGTH);
     int device_path_len = 0;
 
     while (packet_data != NULL) {
@@ -206,23 +206,23 @@ void handle_send_watch(struct session_info * session_info) {
 
         if (device_path_len < MESSAGE_BUFFER_LENGTH - 2) {
             if (first_byte == 0) {
-                session_info->device_path[device_path_len++] = (char)second_byte;
+                session_info->watch_path[device_path_len++] = (char)second_byte;
             } else {
-                session_info->device_path[device_path_len++] = (char)first_byte;
-                session_info->device_path[device_path_len++] = (char)second_byte;
+                session_info->watch_path[device_path_len++] = (char)first_byte;
+                session_info->watch_path[device_path_len++] = (char)second_byte;
             }
         }
 
         packet_data = packet_data->next;
     }
 
-    while (device_path_len > 0 && (session_info->device_path[device_path_len - 1] == '\0' || session_info->device_path[device_path_len - 1] == ' ')) {
+    while (device_path_len > 0 && (session_info->watch_path[device_path_len - 1] == '\0' || session_info->watch_path[device_path_len - 1] == ' ')) {
         device_path_len--;
     }
 
-    session_info->device_path[device_path_len] = '\0';
+    session_info->watch_path[device_path_len] = '\0';
 
-    log_message("Provided File/Dir to watch: %s", session_info->device_path);
+    log_message("Provided File/Dir to watch: %s", session_info->watch_path);
     if (!session_info->run_watcher) {
         session_info->run_watcher = true;
         pthread_create(&session_info->watcher_thread, NULL, watch_directory, session_info);
