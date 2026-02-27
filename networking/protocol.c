@@ -147,6 +147,7 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
                     return true;
                 }
             }
+            session_info->last_command_code = UNKNOWN;
         }
 
     }
