@@ -70,7 +70,7 @@ struct session_info {
     struct packet_data * head;
     int command_counter; // The number of times a command was encountered
     enum command_codes last_command_code;
-
+    int last_command_sequence_number;
     int packet_counter;
     int data_counter;
 

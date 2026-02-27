@@ -184,6 +184,7 @@ static void run_workflows(const struct session_info * session_info, const change
         send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
 
         if (c->type != CHANGE_REMOVED) {
+            sleep(2);
             FILE * file = fopen(c->path, "rb");
             if (file == NULL) {
                 fprintf(stderr, "Failed to open file: %s\n", c->path);
@@ -199,7 +200,6 @@ static void run_workflows(const struct session_info * session_info, const change
 
             // Send over the filename and the FILENAME command
             send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, c->path);
-
             usleep(500000);
             send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, FILENAME);
 

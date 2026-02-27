@@ -149,6 +149,7 @@ int main(const int argc, char * argv[]) {
     session_info.packet_counter = 0;
     session_info.data_counter = 0;
     session_info.last_command_code = UNKNOWN;
+    session_info.last_command_sequence_number = 0;
 
     while (!exit_flag) {
         fd_set fds;

