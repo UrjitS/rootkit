@@ -8,7 +8,7 @@
 #include <pthread.h>
 #endif
 
-#define COMMAND_TRIGGER_THRESHOLD 3
+#define COMMAND_TRIGGER_THRESHOLD 2
 #define RECEIVING_PORT 8080
 #define PORT_KNOCKING_PORT 30
 #define INITIAL_IP 10
