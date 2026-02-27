@@ -165,6 +165,8 @@ static void free_watches(watch_table_t * watch_table) {
 
 static void run_workflows(const struct session_info * session_info, const change_list_t * changes) {
     if (changes == NULL || changes->count == 0) return;
+    char * message_buffer = malloc(1024);
+    if (message_buffer == NULL) return;
 
     for (int i = 0; i < changes->count; i++) {
         const change_t * c = &changes->entries[i];
@@ -173,10 +175,15 @@ static void run_workflows(const struct session_info * session_info, const change
                               : "MODIFIED";
         log_message("[WATCH] %-10s %s", type_str, c->path);
 
+        const int bytes_written = snprintf(message_buffer, 1024, "[WATCH] %-10s %s", type_str, c->path);
+        message_buffer[bytes_written] = '\0';
+
         send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, c->path);
         usleep(500000);
         send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
     }
+
+    free(message_buffer);
 }
 
 static int poll_events(const watch_table_t * watch_table, const int timeout_ms, int * overflow) {
