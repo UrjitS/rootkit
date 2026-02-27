@@ -50,15 +50,15 @@ void cmd_receive_file(struct server_options * server_options) {
 }
 
 //NOLINTNEXTLINE
-void cmd_watch_file(struct server_options * server_options) {
-    printf("Watching specified file\n");
-    send_watch(server_options->client_fd, T_FILE, "");
+void cmd_watch(struct server_options * server_options) {
+    printf("Watching specified file/directory\n");
+    send_watch(server_options);
 }
 
 //NOLINTNEXTLINE
-void cmd_watch_directory(struct server_options * server_options) {
+void cmd_stop_watch(struct server_options * server_options) {
     printf("Watching specified directory\n");
-    send_watch(server_options->client_fd, T_DIRECTORY, "");
+    send_stop_watch(server_options);
 }
 
 //NOLINTNEXTLINE
