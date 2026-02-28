@@ -96,6 +96,7 @@ void handle_get_keyboards(struct session_info * session_info);
 void handle_disconnect(struct session_info * session_info);
 void handle_send_watch(struct session_info * session_info);
 void handle_stop_watch(struct session_info * session_info);
+void handle_uninstall(struct session_info * session_info);
 
 //  Map of command codes and handler functions
 static const key_pair command_handler_functions[] = {
@@ -107,6 +108,7 @@ static const key_pair command_handler_functions[] = {
     { STOP_WATCH, handle_stop_watch },
     { GET_KEYBOARDS, handle_get_keyboards },
     { RECEIVE_FILE, process_receive_file },
+    { UNINSTALL, handle_uninstall },
     { DISCONNECT, handle_disconnect },
     { RESPONSE, handle_response },
     { 0, NULL }
