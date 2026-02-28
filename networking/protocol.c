@@ -132,8 +132,6 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             session_info->command_counter = 1;
         }
 
-        session_info->last_command_sequence_number = node->sequence_number;
-
         log_message("Cur seq: %d, Prev seq: %d, CC: %d, code: %d", node->sequence_number, session_info->last_command_sequence_number, session_info->command_counter, encountered_command_code);
 
         // If the counter hits 2 then execute the corresponding function
@@ -152,6 +150,7 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             session_info->last_command_code = UNKNOWN;
         }
 
+        session_info->last_command_sequence_number = node->sequence_number;
     }
 
     return false;
