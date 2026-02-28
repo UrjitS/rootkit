@@ -52,10 +52,10 @@ void sort_linked_list(struct packet_data * head) {
                 const uint16_t tmp_data = current->data;
 
                 current->sequence_number = current->next->sequence_number;
-                current->data            = current->next->data;
+                current->data = current->next->data;
 
                 current->next->sequence_number = tmp_seq;
-                current->next->data            = tmp_data;
+                current->next->data = tmp_data;
 
                 swapped = 1;
             }
