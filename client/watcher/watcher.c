@@ -162,29 +162,27 @@ static watch_table_t * register_watches(const char * root) {
 
     struct stat st;
     if (lstat(root, &st) < 0) {
-        perror("lstat");
+        close(watch_table->inotify_fd);
         free(watch_table);
         return NULL;
     }
 
     if (S_ISREG(st.st_mode)) {
-        // For a single file, watch its parent directory but filtered to that file
         char parent[RESPONSE_BUFFER_LENGTH];
         strncpy(parent, root, RESPONSE_BUFFER_LENGTH - 1);
         parent[RESPONSE_BUFFER_LENGTH - 1] = '\0';
 
-        // Extract parent directory by trimming after last '/'
         char * last_slash = strrchr(parent, '/');
         if (last_slash != NULL) {
             *last_slash = '\0';
         } else {
-            // No slash means it's in the current directory
             strncpy(parent, ".", RESPONSE_BUFFER_LENGTH - 1);
         }
 
         const int watch_d = inotify_add_watch(watch_table->inotify_fd, parent, INOTIFY_FLAGS);
         if (watch_d < 0) {
             perror("inotify_add_watch");
+            close(watch_table->inotify_fd);
             free(watch_table);
             return NULL;
         }
@@ -276,12 +274,20 @@ static void run_workflows(const struct session_info * session_info, const change
 static int poll_events(const watch_table_t * watch_table, const int timeout_ms, int * overflow) {
     *overflow = 0;
 
+    if (watch_table == NULL) {
+        struct timespec ts;
+        ts.tv_sec  = timeout_ms / 1000;
+        ts.tv_nsec = (timeout_ms % 1000) * 1000000L;
+        nanosleep(&ts, NULL);
+        return 0;
+    }
+
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(watch_table->inotify_fd, &readfds);
 
     struct timeval tv;
-    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_sec  = timeout_ms / 1000;
     tv.tv_usec = (timeout_ms % 1000) * 1000;
 
     const int ret = select(watch_table->inotify_fd + 1, &readfds, NULL, NULL, &tv);
@@ -309,8 +315,8 @@ static int poll_events(const watch_table_t * watch_table, const int timeout_ms, 
 }
 
 static void do_rescan(const struct session_info * session_info, snapshot_t ** index, watch_table_t ** watch_table, const char * root) {
-    snapshot_t * new_index = build_snapshot(root);
-    change_list_t * changes = diff_snapshots(*index, new_index);
+    snapshot_t    * new_index = build_snapshot(root);
+    change_list_t * changes   = diff_snapshots(*index, new_index);
 
     free(*index);
     *index = new_index;
@@ -319,6 +325,7 @@ static void do_rescan(const struct session_info * session_info, snapshot_t ** in
     free(changes);
 
     free_watches(*watch_table);
+
     *watch_table = register_watches(root);
 }
 
