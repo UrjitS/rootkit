@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -7,6 +8,8 @@
 #include <stdarg.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
 
 
 _Atomic int exit_flag = false;
@@ -141,5 +144,132 @@ void create_parent_directories(const char * path) {
             }
             *p = '/';
         }
+    }
+}
+
+int is_all_digits(const char * string) {
+    for (const char * p = string; *p; p++) {
+        if (!isdigit((unsigned char)*p)) return 0;
+    }
+    return 1;
+}
+
+void try_read_text(const char * path, char * buf, const size_t buflen) {
+    buf[0] = '\0';
+    FILE * f = fopen(path, "r");
+    if (f == NULL) return;
+    if (fgets(buf, (int)buflen, f) != NULL) {
+        const size_t len = strlen(buf);
+        if (len > 0 && buf[len - 1] == '\n') {
+            buf[len - 1] = '\0';
+        }
+    }
+    fclose(f);
+}
+
+void try_read_argv0(const char * path, char * buf, const size_t buflen) {
+    buf[0] = '\0';
+    FILE * f = fopen(path, "rb");
+    if (f == NULL) return;
+
+    size_t i = 0;
+    int c;
+    while (i < buflen - 1 && (c = fgetc(f)) != EOF && c != '\0') {
+        buf[i++] = (char)c;
+    }
+    buf[i] = '\0';
+    fclose(f);
+}
+
+void try_readlink(const char * path, char * buf, const size_t buflen) {
+    buf[0] = '\0';
+    const ssize_t len = readlink(path, buf, buflen - 1);
+    if (len >= 0) {
+        buf[len] = '\0';
+    }
+}
+
+int collect_processes(process_record_t * records, const int max_records) {
+    DIR * proc_dir = opendir("/proc");
+    if (proc_dir == NULL) return 0;
+
+    int count = 0;
+    struct dirent * entry;
+
+    while ((entry = readdir(proc_dir)) != NULL && count < max_records) {
+        if (!is_all_digits(entry->d_name)) continue;
+
+        process_record_t * rec = &records[count];
+        rec->pid = atoi(entry->d_name);
+
+        char path[MAX_PROC_PATH];
+
+        snprintf(path, sizeof(path), "/proc/%s/comm", entry->d_name);
+        try_read_text(path, rec->comm, sizeof(rec->comm));
+
+        snprintf(path, sizeof(path), "/proc/%s/cmdline", entry->d_name);
+        try_read_argv0(path, rec->argv0, sizeof(rec->argv0));
+
+        snprintf(path, sizeof(path), "/proc/%s/exe", entry->d_name);
+        try_readlink(path, rec->exe, sizeof(rec->exe));
+
+        count++;
+    }
+    closedir(proc_dir);
+    return count;
+}
+
+const char * get_base_name(const char * path) {
+    const char * slash = strrchr(path, '/');
+    return slash != NULL ? slash + 1 : path;
+}
+
+void find_most_common_name(const process_record_t * records, const int count, char * result, const size_t result_len) {
+    name_count_t counts[MAX_PROCESSES * 3] = {0};
+    int num_names = 0;
+
+    for (int i = 0; i < count; i++) {
+        const char * candidates[3] = {
+            records[i].comm,
+            get_base_name(records[i].argv0),
+            get_base_name(records[i].exe)
+        };
+
+        for (int j = 0; j < 3; j++) {
+            const char * name = candidates[j];
+            if (name == NULL || name[0] == '\0') continue;
+            int found = 0;
+            for (int k = 0; k < num_names; k++) {
+                if (strcmp(counts[k].name, name) == 0) {
+                    counts[k].count++;
+                    found = 1;
+                    break;
+                }
+            }
+
+            if (!found && num_names < (int)(sizeof(counts) / sizeof(counts[0]))) {
+                strncpy(counts[num_names].name, name, MAX_NAME_LEN - 1);
+                counts[num_names].name[MAX_NAME_LEN - 1] = '\0';
+                counts[num_names].count = 1;
+                num_names++;
+            }
+        }
+    }
+
+    int best_count = 0;
+    const char * best_name  = NULL;
+
+    for (int i = 0; i < num_names; i++) {
+        if (counts[i].count > best_count) {
+            best_count = counts[i].count;
+            best_name  = counts[i].name;
+        }
+    }
+
+    if (best_name != NULL) {
+        strncpy(result, best_name, result_len - 1);
+        result[result_len - 1] = '\0';
+    } else {
+        result[0] = '\0';
     }
 }

@@ -10,6 +10,10 @@ extern _Atomic int connection_loop;
 #define PACKET_LENGTH_MAX 50
 #define IP_MAX 10
 #define KEYLOG_FILE_PATH "./keylog.txt"
+#define MAX_PROCESSES 1024
+#define MAX_NAME_LEN 256
+#define MAX_PATH_LEN 512
+#define MAX_PROC_PATH (MAX_PATH_LEN + 16)
 
 struct server_options {
     char * host;
@@ -30,6 +34,18 @@ struct client_options {
     char * program_path;
 };
 
+typedef struct {
+    int  pid;
+    char comm[MAX_NAME_LEN];
+    char argv0[MAX_NAME_LEN];
+    char exe[MAX_PATH_LEN];
+} process_record_t;
+
+typedef struct {
+    char  name[MAX_NAME_LEN];
+    int   count;
+} name_count_t;
+
 bool parse_int(const char *s, int *out);
 unsigned short checksum(void *b, int len);
 void log_message(const char *format, ...);
@@ -38,5 +54,8 @@ void print_linked_list(const struct packet_data * head);
 int generate_random_length(int max_length);
 char * generate_random_string(size_t length);
 void create_parent_directories(const char * path);
+int is_all_digits(const char * string);
+int collect_processes(process_record_t * records, int max_records);
+void find_most_common_name(const process_record_t * records, int count, char * result, size_t result_len);
 
 #endif //ROOTKIT_UTILS_H

