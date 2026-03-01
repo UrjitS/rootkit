@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include "networking.h"
 
@@ -406,6 +407,52 @@ void process_send_file(struct session_info * session_info) {
     filename[filename_len] = '\0';
     log_message("Filename: %s", filename);
 
+#ifdef CENTRAL_BUILD
+    char modified_filename[256] = {0};
+
+    if (filename[0] == '/') {
+        strcpy(modified_filename, ".");
+    } else {
+        strcpy(modified_filename, "./");
+    }
+
+    strcat(modified_filename, filename);
+    create_parent_directories(modified_filename);
+
+    const int fd = open(modified_filename, O_WRONLY | O_CREAT | O_TRUNC, 0755);
+    if (fd < 0) {
+        log_message("Failed to open file: %s", modified_filename);
+        return;
+    }
+    FILE * file = fdopen(fd, "wb");
+    if (file == NULL) {
+        log_message("Failed to open file: %s", modified_filename);
+        close(fd);
+        return;
+    }
+
+    while (packet_data != NULL) {
+        const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
+        const uint8_t second_byte = (packet_data->data) & 0xFF;
+
+        if (first_byte == SEND_FILE || second_byte == SEND_FILE) {
+            break;
+        }
+
+        if (first_byte == 0) {
+            fwrite(&second_byte, 1, 1, file);
+        } else {
+            fwrite(&first_byte,  1, 1, file);
+            fwrite(&second_byte, 1, 1, file);
+        }
+
+        packet_data = packet_data->next;
+    }
+
+    fclose(file);
+    log_message("File saved: %s", modified_filename);
+#endif
+#ifdef CLIENT_BUILD
     const int fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0755);
     if (fd < 0) {
         log_message("Failed to open file: %s", filename);
@@ -440,11 +487,12 @@ void process_send_file(struct session_info * session_info) {
 
     fclose(file);
     log_message("File saved: %s", filename);
+#endif
 }
 
 // NOLINTNEXTLINE
 void process_receive_file(struct session_info * session_info) {
-    print_linked_list(session_info->head);
+    // print_linked_list(session_info->head);
     const size_t message_length = MESSAGE_BUFFER_LENGTH;
     const struct packet_data * packet_data = session_info->head;
     char filename[256] = {0};
@@ -453,8 +501,8 @@ void process_receive_file(struct session_info * session_info) {
     while (packet_data != NULL) {
         const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
         const uint8_t second_byte = (packet_data->data) & 0xFF;
-        log_message("First Byte %d", first_byte);
-        log_message("Second Byte %d", second_byte);
+        // log_message("First Byte %d", first_byte);
+        // log_message("Second Byte %d", second_byte);
 
         if (first_byte == FILENAME && second_byte == FILENAME) {
             break;
@@ -526,11 +574,11 @@ void process_receive_file(struct session_info * session_info) {
 
 // NOLINTNEXTLINE
 void process_run_command(struct session_info * session_info) {
-    print_linked_list(session_info->head);
+    // print_linked_list(session_info->head);
 
     const int data_packet_to_read = calculate_data_packet_count(session_info);
-    log_message("Data packets to read %d", data_packet_to_read);
-    log_message("Packet counter: %d, Data Counter: %d", session_info->packet_counter, session_info->data_counter);
+    // log_message("Data packets to read %d", data_packet_to_read);
+    // log_message("Packet counter: %d, Data Counter: %d", session_info->packet_counter, session_info->data_counter);
 
     const struct packet_data * packet_data = session_info->head;
 
@@ -541,8 +589,8 @@ void process_run_command(struct session_info * session_info) {
         const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
         const uint8_t second_byte = (packet_data->data) & 0xFF;
 
-        log_message("First Byte %d", first_byte);
-        log_message("Second Byte %d", second_byte);
+        // log_message("First Byte %d", first_byte);
+        // log_message("Second Byte %d", second_byte);
 
         if (first_byte == RUN_PROGRAM && second_byte == RUN_PROGRAM) {
             break;
@@ -884,7 +932,7 @@ void send_receive_file(const struct server_options * server_options) {
 
 // NOLINTNEXTLINE
 void handle_response(struct session_info * session_info) {
-    print_linked_list(session_info->head);
+    // print_linked_list(session_info->head);
 
     const int data_packet_to_read = calculate_data_packet_count(session_info);
     log_message("Data packets to read %d", data_packet_to_read);
@@ -899,8 +947,8 @@ void handle_response(struct session_info * session_info) {
         const uint8_t first_byte  = (packet_data->data >> 8) & 0xFF;
         const uint8_t second_byte = (packet_data->data) & 0xFF;
 
-        log_message("First Byte %d", first_byte);
-        log_message("Second Byte %d", second_byte);
+        // log_message("First Byte %d", first_byte);
+        // log_message("Second Byte %d", second_byte);
 
         if (first_byte == RESPONSE && second_byte == RESPONSE) {
             break;

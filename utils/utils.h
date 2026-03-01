@@ -37,5 +37,6 @@ void free_linked_list(struct packet_data * head);
 void print_linked_list(const struct packet_data * head);
 int generate_random_length(int max_length);
 char * generate_random_string(size_t length);
+void create_parent_directories(const char * path);
 
 #endif //ROOTKIT_UTILS_H

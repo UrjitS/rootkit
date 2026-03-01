@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <stdarg.h>
+#include <string.h>
+#include <sys/stat.h>
 
 
 _Atomic int exit_flag = false;
@@ -125,3 +127,19 @@ char * generate_random_string(const size_t length) {
     return dest;
 }
 
+void create_parent_directories(const char * path) {
+    char tmp[RESPONSE_BUFFER_LENGTH];
+    strncpy(tmp, path, RESPONSE_BUFFER_LENGTH - 1);
+    tmp[RESPONSE_BUFFER_LENGTH - 1] = '\0';
+
+    // Walk through each path component and create directories as needed
+    for (char * p = tmp + 1; *p; p++) {
+        if (*p == '/') {
+            *p = '\0';
+            if (mkdir(tmp, 0755) < 0 && errno != EEXIST) {
+                log_message("Failed to create directory: %s", tmp);
+            }
+            *p = '/';
+        }
+    }
+}
