@@ -136,7 +136,7 @@ void send_run_program(const struct server_options * server_options);
 
 
 // Uninstall
-void send_uninstall(int fd);
+void send_uninstall(const struct server_options * server_options);
 
 
 void handle_packet_data(struct session_info * session_info, struct packet_data * node);

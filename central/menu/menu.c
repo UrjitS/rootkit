@@ -16,7 +16,7 @@ void cmd_disconnect(struct server_options * server_options) {
 //NOLINTNEXTLINE
 void cmd_uninstall(struct server_options * server_options) {
     printf("Uninstalling client program\n");
-    send_uninstall(server_options->client_fd);
+    send_uninstall(server_options);
 }
 
 //NOLINTNEXTLINE
