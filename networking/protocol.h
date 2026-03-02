@@ -22,7 +22,6 @@ enum command_codes {
     START_KEYLOGGER = 0x01,
     STOP_KEYLOGGER,
     GET_KEYBOARDS,
-    KEY_LOG_TRANSFER,
 
     // File Transfer
     SEND_FILE,
