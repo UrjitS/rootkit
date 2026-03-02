@@ -60,6 +60,7 @@ unsigned short checksum(void *b, int len)
 }
 
 void log_message(const char *format, ...) {
+#ifdef DEBUG
     // Get current time
     time_t now;
     time(&now);
@@ -79,6 +80,7 @@ void log_message(const char *format, ...) {
     printf("\n");
 
     fflush(stdout);
+#endif
 }
 
 void print_linked_list(const struct packet_data * head) {

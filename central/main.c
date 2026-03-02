@@ -12,6 +12,8 @@
 #include "networking.h"
 #include "protocol.h"
 #include "utils.h"
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 void usage(const char *program_name) {
     printf("--------------------------------------------------------------------\n");
@@ -65,14 +67,25 @@ int handle_arguments(const int argc, char * argv[], struct server_options * serv
         return EXIT_FAILURE;
     }
 
+    struct sockaddr_in  sa4;
+    struct sockaddr_in6 sa6;
+
+    if (inet_pton(AF_INET, server_options->client_ip_address, &sa4.sin_addr) != 1 &&
+        inet_pton(AF_INET6, server_options->client_ip_address, &sa6.sin6_addr) != 1) {
+        fprintf(stderr, "Invalid client IP address: %s\n", server_options->client_ip_address);
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+
     return EXIT_SUCCESS;
 }
 
 int main(const int argc, char * argv[]) {
     // Check if running as root
     if (geteuid() != 0) {
-        fprintf(stderr, "Warning: Not running as root. Some devices may not be accessible.\n");
-        fprintf(stderr, "Consider running with: sudo %s\n\n", argv[0]);
+        fprintf(stderr, "Warning: Not running as root.\n");
+        fprintf(stderr, "Run with: sudo %s\n\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     if (signal(SIGINT, signal_handler) == SIG_ERR) {

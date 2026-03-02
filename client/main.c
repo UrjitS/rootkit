@@ -163,6 +163,7 @@ int main(const int argc, char * argv[]) {
     if (geteuid() != 0) {
         fprintf(stderr, "Warning: Not running as root.\n");
         fprintf(stderr, "Run with: sudo %s\n\n", argv[0]);
+        return EXIT_FAILURE;
     }
 
     if (signal(SIGINT, signal_handler) == SIG_ERR) {

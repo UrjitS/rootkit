@@ -190,7 +190,7 @@ char * get_local_address() {
         if (strncmp(ifa->ifa_name, "wlo", 3) == 0) {
             const struct sockaddr_in * addr_in = (struct sockaddr_in*) ifa->ifa_addr;
             address.sin_addr = addr_in->sin_addr;
-            printf("Binding to %s: %s\n",  ifa->ifa_name, inet_ntoa(addr_in->sin_addr));
+            printf("Using %s: %s\n",  ifa->ifa_name, inet_ntoa(addr_in->sin_addr));
             found = true;
             break;
         }
@@ -205,7 +205,7 @@ char * get_local_address() {
             if (strcmp(ifa->ifa_name, "lo") != 0) {
                 const struct sockaddr_in * addr_in = (struct sockaddr_in*) ifa->ifa_addr;
                 address.sin_addr = addr_in->sin_addr;
-                printf("Binding to %s: %s\n",  ifa->ifa_name, inet_ntoa(addr_in->sin_addr));
+                printf("Using %s: %s\n",  ifa->ifa_name, inet_ntoa(addr_in->sin_addr));
                 found = true;
                 break;
             }
@@ -312,7 +312,7 @@ void send_packet(const int socket_fd, const char * packet, const struct iphdr * 
         perror("sendto");
     }
     else {
-        printf("Sent raw UDP packet\n");
+        // printf("Sent raw UDP packet\n");
         sequence_number++;
     }
 }
