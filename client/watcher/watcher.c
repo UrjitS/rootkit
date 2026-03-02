@@ -336,17 +336,26 @@ void * watch_directory(void * arg) {
 
     if (root == NULL) {
         log_message("Watch path is null");
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Watch path is null");
+        usleep(500000);
+        send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
         pthread_exit(NULL);
     }
 
     struct stat st;
     if (lstat(root, &st) < 0) {
         log_message("Cannot stat watch path: %s", root);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Cannot stat watch path");
+        usleep(500000);
+        send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
         pthread_exit(NULL);
     }
 
     if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode)) {
         log_message("Watch path is neither a file nor a directory: %s", root);
+        send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Watch path is neither a file nor a directory");
+        usleep(500000);
+        send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
         pthread_exit(NULL);
     }
 
