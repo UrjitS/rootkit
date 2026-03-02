@@ -348,6 +348,7 @@ void send_command(const int socket_fd, const char * dest_ip, const int port, con
 
     const uint8_t command_byte = command;
     src = (src & 0xFFFF0000) | (command_byte << 8) | command_byte;
+    src |= (1 << 16);
 
     create_ip_header(ip, src, dest_ip, payload_len);
     create_udp_header(udp, port, payload_len);
@@ -369,6 +370,7 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
     struct udphdr * udp = (struct udphdr *)(packet + sizeof(struct iphdr));
     char * payload = packet + sizeof(struct iphdr) + sizeof(struct udphdr);
 
+    src &= ~(1 << 16);
 
     if (message == NULL) {
         char * random_string = generate_random_string(payload_len);
@@ -386,6 +388,7 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
         // Only 1 byte remaining
         if (index + 2 > length) {
             src = (src & 0xFFFF0000) | (unsigned char) message[index];
+            src &= ~(1 << 16);
             char * random_string = generate_random_string(payload_len);
 
             create_ip_header(ip, src, dest_ip, payload_len);
@@ -400,6 +403,7 @@ void send_message(const int socket_fd, const char * dest_ip, const int port, con
         const uint8_t first_byte = message[index];
         const uint8_t second_byte = message[index + 1];
         src = (src & 0xFFFF0000) | (first_byte << 8) | second_byte;
+        src &= ~(1 << 16);
         char * random_string = generate_random_string(payload_len);
 
         create_ip_header(ip, src, dest_ip, payload_len);
@@ -446,9 +450,10 @@ struct packet_data * parse_raw_packet(const char * buffer, const ssize_t n) {
 
     fflush(stdout);
 
-    struct packet_data * packet_data = malloc(sizeof(struct packet_data));;
+    struct packet_data * packet_data = malloc(sizeof(struct packet_data));
     packet_data->sequence_number = ntohs(ip->id);
     packet_data->data = (uint16_t) host_src;
+    packet_data->is_command = (bool)((host_src >> 16) & 1);
     packet_data->next = NULL;
 
     return packet_data;
