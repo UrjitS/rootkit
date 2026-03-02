@@ -207,7 +207,7 @@ static void free_watches(watch_table_t * watch_table) {
     free(watch_table);
 }
 
-static void run_workflows(const struct session_info * session_info, const change_list_t * changes) {
+static void run_workflows(struct session_info * session_info, const change_list_t * changes) {
     if (changes == NULL || changes->count == 0) return;
     char * message_buffer = malloc(MESSAGE_BUFFER_LENGTH);
     if (message_buffer == NULL) return;
@@ -314,7 +314,7 @@ static int poll_events(const watch_table_t * watch_table, const int timeout_ms, 
     return 1;
 }
 
-static void do_rescan(const struct session_info * session_info, snapshot_t ** index, watch_table_t ** watch_table, const char * root) {
+static void do_rescan(struct session_info * session_info, snapshot_t ** index, watch_table_t ** watch_table, const char * root) {
     snapshot_t    * new_index = build_snapshot(root);
     change_list_t * changes   = diff_snapshots(*index, new_index);
 
@@ -325,13 +325,20 @@ static void do_rescan(const struct session_info * session_info, snapshot_t ** in
     free(changes);
 
     free_watches(*watch_table);
-
     *watch_table = register_watches(root);
+
+    if (*watch_table == NULL) {
+        struct stat st;
+        if (lstat(root, &st) < 0) {
+            log_message("Watch path no longer exists, stopping watcher: %s", root);
+            session_info->run_watcher = 0;
+        }
+    }
 }
 
 // NOLINTNEXTLINE
 void * watch_directory(void * arg) {
-    const struct session_info * session_info = arg;
+    struct session_info * session_info = arg;
     const char * root = session_info->watch_path;
 
     if (root == NULL) {
@@ -409,5 +416,6 @@ void * watch_directory(void * arg) {
     free(index);
     free_watches(watch_table);
     free(session_info->watch_path);
+    session_info->run_watcher = false;
     pthread_exit(NULL);
 }

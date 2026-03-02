@@ -228,8 +228,11 @@ void handle_send_watch(struct session_info * session_info) {
 
     log_message("Provided File/Dir to watch: %s", session_info->watch_path);
     if (!session_info->run_watcher) {
+        log_message("Starting watcher");
         session_info->run_watcher = true;
         pthread_create(&session_info->watcher_thread, NULL, watch_directory, session_info);
+    } else {
+        log_message("Not Starting watcher");
     }
 #endif
 }
@@ -238,8 +241,11 @@ void handle_send_watch(struct session_info * session_info) {
 void handle_stop_watch(struct session_info * session_info) {
     log_message("Stoping Watch");
 #ifdef CLIENT_BUILD
-    session_info->run_watcher = false;
-    pthread_join(session_info->watcher_thread, NULL);
+    if (session_info->run_watcher) {
+        session_info->run_watcher = false;
+        pthread_join(session_info->watcher_thread, NULL);
+    }
+    session_info->run_watcher = false; // just in case
 #endif
 }
 
