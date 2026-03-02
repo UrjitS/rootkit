@@ -253,7 +253,7 @@ void handle_uninstall(struct session_info * session_info) {
     if (remove(KEYLOG_FILE_PATH) != 0) {
         perror("Error removing keylog");
     }
-
+    log_message("Exiting process");
     exit(EXIT_SUCCESS);
 #endif
 }
