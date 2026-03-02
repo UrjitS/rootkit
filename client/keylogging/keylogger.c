@@ -84,7 +84,8 @@ void update_modifiers(const int code, const int value) {
             }
             break;
         default:
-            log_message("Hit Default Case in update_modifiers");
+            // log_message("Hit Default Case in update_modifiers");
+            break;
     }
 }
 
@@ -218,7 +219,7 @@ const char* code_to_string_buf(const int type, const int code, char *buf, const 
             case KEY_END: return "KEY_END";
             case KEY_INSERT: return "KEY_INSERT";
             case KEY_DELETE: return "KEY_DELETE";
-            default: fprintf(stderr, "Hit Default Case in code_to_string_buf");
+            default: break;
         }
 
         // Function keys

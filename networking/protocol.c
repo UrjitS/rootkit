@@ -68,8 +68,8 @@ void sort_linked_list(struct packet_data * head) {
 
 bool handle_command_codes(struct session_info * session_info, const struct packet_data * node) {
     enum command_codes encountered_command_code = {};
-    bool is_command_code = true;
 
+    if (!node->is_command) return false;
 
     const uint8_t first_byte  = (node->data >> 8) & 0xFF;
     const uint8_t last_byte = node->data & 0xFF;
@@ -121,38 +121,35 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             break;
         default:
             // log_message("Default\n");
-            is_command_code = false;
             break;
     }
 
-    if (is_command_code) {
-        if (session_info->last_command_code == encountered_command_code) {
-            session_info->command_counter++;
-        } else {
-            session_info->last_command_code = encountered_command_code;
-            session_info->command_counter = 1;
-        }
-
-        log_message("Cur seq: %d, Prev seq: %d, CC: %d, code: %d", node->sequence_number, session_info->last_command_sequence_number, session_info->command_counter, encountered_command_code);
-
-        // If the counter hits 2 then execute the corresponding function
-        if (session_info->last_command_sequence_number + 1 == node->sequence_number && session_info->command_counter >= COMMAND_TRIGGER_THRESHOLD) {
-            log_message("Triggered function call: counter %d, code: %d", session_info->command_counter, encountered_command_code);
-            session_info->command_counter = 0;
-
-            sort_linked_list(session_info->head);
-
-            for (int i = 0; command_handler_functions[i].key != 0; i++) {
-                if (command_handler_functions[i].key == encountered_command_code) {
-                    command_handler_functions[i].handler(session_info);
-                    return true;
-                }
-            }
-            session_info->last_command_code = UNKNOWN;
-        }
-
-        session_info->last_command_sequence_number = node->sequence_number;
+    if (session_info->last_command_code == encountered_command_code) {
+        session_info->command_counter++;
+    } else {
+        session_info->last_command_code = encountered_command_code;
+        session_info->command_counter = 1;
     }
+
+    log_message("Cur seq: %d, Prev seq: %d, CC: %d, code: %d", node->sequence_number, session_info->last_command_sequence_number, session_info->command_counter, encountered_command_code);
+
+    // If the counter hits 2 then execute the corresponding function
+    if (session_info->last_command_sequence_number + 1 == node->sequence_number && session_info->command_counter >= COMMAND_TRIGGER_THRESHOLD) {
+        log_message("Triggered function call: counter %d, code: %d", session_info->command_counter, encountered_command_code);
+        session_info->command_counter = 0;
+
+        sort_linked_list(session_info->head);
+
+        for (int i = 0; command_handler_functions[i].key != 0; i++) {
+            if (command_handler_functions[i].key == encountered_command_code) {
+                command_handler_functions[i].handler(session_info);
+                return true;
+            }
+        }
+        session_info->last_command_code = UNKNOWN;
+    }
+
+    session_info->last_command_sequence_number = node->sequence_number;
 
     return false;
 }
