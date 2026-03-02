@@ -119,9 +119,13 @@ bool handle_command_codes(struct session_info * session_info, const struct packe
             log_message("Receiving File\n");
             encountered_command_code = RECEIVE_FILE;
             break;
-        default:
-            // log_message("Default\n");
+        case UNINSTALL:
+            log_message("Uninstalling\n");
+            encountered_command_code = UNINSTALL;
             break;
+        default:
+            log_message("Default\n");
+            return false;
     }
 
     if (session_info->last_command_code == encountered_command_code) {
