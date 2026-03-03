@@ -188,7 +188,7 @@ int main(const int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
     const pid_t pid = getpid();
-    printf("PID: %d", pid);
+    printf("PID: %d\n", pid);
 
     rename_process_to_most_common(argc, argv);
 
