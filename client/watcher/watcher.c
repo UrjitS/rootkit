@@ -346,6 +346,7 @@ void * watch_directory(void * arg) {
         send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Watch path is null");
         usleep(500000);
         send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+        session_info->run_watcher = false;
         pthread_exit(NULL);
     }
 
@@ -355,6 +356,7 @@ void * watch_directory(void * arg) {
         send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Cannot stat watch path");
         usleep(500000);
         send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+        session_info->run_watcher = false;
         pthread_exit(NULL);
     }
 
@@ -363,6 +365,7 @@ void * watch_directory(void * arg) {
         send_message(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, "Watch path is neither a file nor a directory");
         usleep(500000);
         send_command(session_info->client_options_->client_fd, session_info->client_options_->knock_source_ip, RECEIVING_PORT, RESPONSE);
+        session_info->run_watcher = false;
         pthread_exit(NULL);
     }
 
@@ -375,6 +378,7 @@ void * watch_directory(void * arg) {
         log_message("Failed to initialise watcher");
         free(index);
         free_watches(watch_table);
+        session_info->run_watcher = false;
         pthread_exit(NULL);
     }
 

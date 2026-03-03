@@ -97,33 +97,14 @@ int parse_arguments(const int argc, char * argv[], struct client_options * clien
     return 0;
 }
 
-int wait_for_port_knock(struct client_options * client_options) {
-    int return_val = listen_port_knock(client_options);
+int wait_for_port_knock(const struct client_options * client_options) {
+    const int return_val = listen_port_knock(client_options);
     if (return_val == -1) {
         fprintf(stderr, "Error while listening for port knock\n");
         return EXIT_FAILURE;
     }
 
     connection_loop = true;
-
-    const int raw_socket = create_raw_udp_socket();
-    if (raw_socket == -1) {
-        fprintf(stderr, "Error creating raw socket\n");
-        return EXIT_FAILURE;
-    }
-
-    return_val = bind_raw_socket(raw_socket, client_options->interface_name);
-    if (return_val == -1) {
-        fprintf(stderr, "Error binding raw socket to interface\n");
-        close(raw_socket);
-        return EXIT_FAILURE;
-    }
-
-    client_options->client_fd = raw_socket;
-
-    const int flags = fcntl(raw_socket, F_GETFL, 0);
-    fcntl(raw_socket, F_SETFL, flags | O_NONBLOCK);
-
 
     return EXIT_SUCCESS;
 }
@@ -193,6 +174,25 @@ int main(const int argc, char * argv[]) {
         fprintf(stderr, "Error parsing arguments\n");
         return EXIT_FAILURE;
     }
+
+    const int raw_socket = create_raw_udp_socket();
+
+    if (raw_socket == -1) {
+        fprintf(stderr, "Error creating raw socket\n");
+        return EXIT_FAILURE;
+    }
+
+    return_val = bind_raw_socket(raw_socket, client_options->interface_name);
+    if (return_val == -1) {
+        fprintf(stderr, "Error binding raw socket to interface\n");
+        close(raw_socket);
+        return EXIT_FAILURE;
+    }
+
+    client_options.client_fd = raw_socket;
+
+    const int flags = fcntl(raw_socket, F_GETFL, 0);
+    fcntl(raw_socket, F_SETFL, flags | O_NONBLOCK);
 
     while (!exit_flag) {
         return_val = wait_for_port_knock(&client_options);
