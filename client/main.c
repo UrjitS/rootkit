@@ -182,7 +182,7 @@ int main(const int argc, char * argv[]) {
         return EXIT_FAILURE;
     }
 
-    return_val = bind_raw_socket(raw_socket, client_options->interface_name);
+    return_val = bind_raw_socket(raw_socket, client_options.interface_name);
     if (return_val == -1) {
         fprintf(stderr, "Error binding raw socket to interface\n");
         close(raw_socket);
